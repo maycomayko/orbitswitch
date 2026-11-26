@@ -7,7 +7,7 @@ Update this page in the same PR whenever verification scope changes.
 
 | | macOS 26+ | Windows 10/11 x64 |
 |---|---|---|
-| Builds and CI checks | Yes | Yes |
+| Build target and CI configuration | Yes | Yes |
 | Installer | Native architecture `.app`, ad-hoc signed | NSIS `-setup.exe`, unsigned |
 | Verified on a real installation | Yes (macOS 27) | **Not verified** ([#3](https://github.com/shengyy/orbitswitch/issues/3)) |
 
@@ -34,8 +34,8 @@ Update this page in the same PR whenever verification scope changes.
     personal sign-in, which has an account email and can omit the raw ID token. Switching between
     two live accounts and reopening their projects, conversations, and authorized tools remain
     **not verified**.
-  - Independent plan and quota handling: an expired Pro account updates to `Free` even when quota
-    returns HTTP 403.
+  - The fork skips quota queries for confirmed Free accounts while continuing to refresh their
+    plans. Network settings can use system networking or an optional local HTTP proxy.
   - Native menus, clipboard copy and Open at Login through SMAppService.
   - The original OAuth request reaches Google's sign-in form in a fresh Chrome 156.0.8078.48
     incognito context on macOS 27.0.1. Completing private-window account enrollment remains

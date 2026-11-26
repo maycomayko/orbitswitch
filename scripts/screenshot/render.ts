@@ -1,7 +1,7 @@
 // Renders the README screenshots from the real UI with demo data.
 //   bun scripts/screenshot/render.ts
 // Needs Google Chrome and ImageMagick (`magick`). Renders at 3x and writes
-// assets/screenshots/{hero,flow,adding}-{light,dark}@3x.png plus 2x
+// assets/screenshots/{hero,hero-zh,flow,adding}-{light,dark}@3x.png plus 2x
 // copies without the suffix.
 
 import { mkdtemp, rm } from "node:fs/promises";
@@ -13,6 +13,7 @@ const CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const here = import.meta.dir;
 const repo = join(here, "../..");
 const out = join(repo, "assets/screenshots");
+const readmeOnly = process.argv.includes("--readme");
 const site = await mkdtemp(join(tmpdir(), "orbitswitch-site-"));
 const profile = await mkdtemp(join(tmpdir(), "orbitswitch-chrome-"));
 
@@ -111,7 +112,7 @@ async function shoot(scene: string, scheme: "light" | "dark", ready: string, fil
   const box = JSON.parse(
     String(await evaluate("JSON.stringify(document.querySelector('.stage').getBoundingClientRect())")),
   ) as { x: number; y: number; width: number; height: number };
-  const margin = 72; // room for the whole stage shadow (0 18px 50px)
+  const margin = scene.startsWith("hero") ? 32 : 72;
   const shot = await send("Page.captureScreenshot", {
     format: "png",
     captureBeyondViewport: true,
@@ -134,8 +135,14 @@ const publish = async (source: string, name: string) => {
 };
 try {
   for (const scheme of ["light", "dark"] as const) {
-    await shoot("list", scheme, ".card .tag-best", join(work, "hero.png"));
-    await publish(join(work, "hero.png"), `hero-${scheme}`);
+    for (const [name, lang] of [
+      ["hero", "en-US"],
+      ["hero-zh", "zh-CN"],
+    ]) {
+      await shoot(`hero&lang=${lang}`, scheme, ".card .tag-current", join(work, "hero.png"));
+      await publish(join(work, "hero.png"), `${name}-${scheme}`);
+    }
+    if (readmeOnly) continue;
     await shoot("confirm", scheme, ".sheet h2", join(work, "confirm.png"));
     await shoot("switching", scheme, ".steps .now", join(work, "switching.png"));
     await $`magick ${join(work, "confirm.png")} ${join(work, "switching.png")} -background none +append ${join(work, "flow.png")}`.quiet();
@@ -149,4 +156,4 @@ try {
   server.stop(true);
   await Promise.all([site, profile, work].map((dir) => rm(dir, { recursive: true, force: true })));
 }
-console.log("wrote {hero,flow,adding}-{light,dark}{,@3x}.png to assets/screenshots");
+console.log("Wrote screenshots to assets/screenshots");

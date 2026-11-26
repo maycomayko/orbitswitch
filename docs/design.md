@@ -56,8 +56,8 @@ rsvg-convert -h 36 assets/brand/tray-template.svg -o src-tauri/icons/tray-templa
 Render README screenshots from the real UI with fictional accounts:
 
 ```bash
-bun scripts/screenshot/render.ts   # requires Google Chrome and ImageMagick
+bun scripts/screenshot/render.ts --readme   # requires Google Chrome and ImageMagick
 ```
 
-Writes `assets/screenshots/{hero,flow,adding}-{light,dark}@3x.png` and 2x copies without the
-suffix using `scripts/screenshot/mock-tauri.js` and `frame.css`.
+Writes the English and Chinese README images in light and dark mode. Omit `--readme` to also
+render the switch and sign-in sheets.

@@ -67,6 +67,19 @@ body {
     inset 0 0 0 0.5px rgb(255 255 255 / 0.7);
 }
 
+.readme-demo .stage {
+  width: 392px;
+  padding-bottom: 16px;
+}
+
+.readme-demo .menubar .tray {
+  left: calc(50% - 18px);
+}
+
+.readme-demo #root {
+  margin: 8px auto 0;
+}
+
 @media (prefers-color-scheme: dark) {
   .stage {
     background: linear-gradient(155deg, #28362f, #1b2420);

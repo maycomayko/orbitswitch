@@ -1,9 +1,11 @@
 // Stands in for Tauri's IPC so the real UI renders demo accounts in a browser.
 // Only fictional names and example.com addresses: these screenshots are public.
-// Query: ?scene=list|confirm|switching|adding
+// Query: ?scene=hero|list|confirm|switching|adding
 
 const params = new URLSearchParams(location.search);
 const scene = params.get("scene") ?? "list";
+const chinese = params.get("lang")?.startsWith("zh");
+if (scene === "hero") document.documentElement.classList.add("readme-demo");
 // Screenshots are English regardless of the machine's language.
 Object.defineProperty(Navigator.prototype, "language", { get: () => params.get("lang") ?? "en-US" });
 
@@ -83,6 +85,23 @@ if (scene === "stale") {
   (account.quota.groups[0].fiveHour ?? account.quota.groups[0].weekly).remaining = 0;
 }
 if (scene === "empty") snapshot.accounts = [];
+if (scene === "hero") {
+  snapshot.accounts = [
+    {
+      ...snapshot.accounts[0],
+      email: "free@example.com",
+      name: chinese ? "演示 Free" : "Demo Free",
+      plan: { kind: "free", name: "Free" },
+      quota: { status: "free" },
+    },
+    {
+      ...snapshot.accounts[1],
+      email: "pro@example.com",
+      name: chinese ? "演示 Pro" : "Demo Pro",
+      quota: quota([0.74, 0.9, 2 * HOUR, 40 * HOUR], [0.51, 0.82, 4 * HOUR, 40 * HOUR]),
+    },
+  ];
+}
 window.__orbitDemo = { calls: [], snapshot };
 const processes = [
   { pid: 1, kind: "app" },
