@@ -86,11 +86,10 @@ Base URL: `https://daily-cloudcode-pa.googleapis.com/v1internal` (`POST` with be
 
 ## Processes
 
-All processes that hold the active credential must exit before rewriting it:
+OrbitSwitch waits for the processes in the selected desktop installation before rewriting its sign-in:
 
 - `Antigravity.app/Contents/MacOS/Antigravity` (Windows: `Antigravity.exe`)
 - Electron helpers and `Contents/Resources/bin/language_server` under the install root
-- `agy` CLI
 
 `~/Library/Application Support/Antigravity/app_storage.json` (`jetski.onboarding.lastLoginUsername`)
 is not modified.

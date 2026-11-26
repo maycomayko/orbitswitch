@@ -2,11 +2,13 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import type { BackendError, RelatedProcess, Snapshot } from "./types";
+import type { BackendError, NetworkSettings, RelatedProcess, Snapshot } from "./types";
 
 export const ipc = {
   snapshot: () => invoke<Snapshot>("get_snapshot"),
   refresh: (force: boolean) => invoke<void>("refresh", { force }),
+  testNetwork: (settings: NetworkSettings) => invoke<void>("test_network", { settings }),
+  saveNetwork: (settings: NetworkSettings) => invoke<void>("save_network", { settings }),
   addAccount: () => invoke<string>("add_account"),
   cancelAddAccount: () => invoke<void>("cancel_add_account"),
   copySignInLink: () => invoke<void>("copy_sign_in_link"),

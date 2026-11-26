@@ -30,6 +30,10 @@ pub enum Error {
     TokenRevoked,
     #[error("network error: {0}")]
     Network(String),
+    #[error("network settings could not be loaded")]
+    NetworkConfiguration,
+    #[error("Antigravity reopened, but the saved sign-in could not be confirmed")]
+    SignInUnconfirmed,
     #[error("unexpected response from {endpoint}: HTTP {status}")]
     Http { endpoint: &'static str, status: u16 },
     #[error("credential store error: {0}")]
@@ -65,6 +69,8 @@ impl Error {
             Self::OAuthDenied(_) => "oauth_denied",
             Self::TokenRevoked => "token_revoked",
             Self::Network(_) => "network",
+            Self::NetworkConfiguration => "network_configuration",
+            Self::SignInUnconfirmed => "sign_in_unconfirmed",
             Self::Http { .. } => "http",
             Self::SecretStore(_) => "secret_store",
             Self::ProcessStuck(_) => "process_stuck",

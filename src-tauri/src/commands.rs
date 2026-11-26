@@ -10,6 +10,7 @@ use tauri_plugin_opener::OpenerExt;
 use crate::antigravity::process;
 use crate::error::{Error, Result};
 use crate::model::{RelatedProcess, Snapshot};
+use crate::network::{self, NetworkSettings};
 use crate::state::Orbit;
 use crate::{accounts, autostart, quota, scheduler, shell, switcher};
 
@@ -33,6 +34,23 @@ pub async fn refresh(orbit: Shared<'_>, force: bool) -> Result<()> {
     Ok(())
 }
 
+#[tauri::command]
+pub async fn test_network(settings: NetworkSettings) -> Result<()> {
+    network::test_connection(settings).await
+}
+
+#[tauri::command]
+pub async fn save_network(orbit: Shared<'_>, settings: NetworkSettings) -> Result<()> {
+    let sync = orbit.sync_lock.try_lock().map_err(|_| Error::Busy)?;
+    if !orbit.is_idle() {
+        return Err(Error::Busy);
+    }
+    orbit.save_network(settings)?;
+    drop(sync);
+    let orbit = Arc::clone(&orbit);
+    tauri::async_runtime::spawn(async move { scheduler::tick(&orbit).await });
+    Ok(())
+}
 #[tauri::command]
 pub async fn add_account(orbit: Shared<'_>) -> Result<String> {
     let result = accounts::add(&orbit).await;

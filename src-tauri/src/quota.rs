@@ -7,7 +7,7 @@ use chrono::Utc;
 use tokio::task::JoinSet;
 
 use crate::error::{Error, Result};
-use crate::google::cloudcode::{self, Plan, QuotaGroup};
+use crate::google::cloudcode::{self, Plan, PlanKind, QuotaGroup};
 use crate::model::QuotaState;
 use crate::state::{Inner, Orbit};
 
@@ -56,15 +56,27 @@ pub async fn refresh_if_stale(orbit: &Arc<Orbit>, max_age: Duration) {
 }
 
 struct Refresh {
-    groups: Result<Vec<QuotaGroup>>,
+    groups: Result<Option<Vec<QuotaGroup>>>,
     plan: Result<Plan>,
 }
 
 pub async fn refresh_one(orbit: &Arc<Orbit>, account_id: &str) {
+    let saved_plan = orbit
+        .state()
+        .registry
+        .get(account_id)
+        .and_then(|account| account.plan.as_ref().map(|plan| plan.kind));
     let result = async {
         let token = orbit.access_token(account_id).await?;
-        let cloudcode = cloudcode::Client::new(&orbit.http, &orbit.install()?)?;
-        let (groups, plan) = tokio::join!(cloudcode.quota(&token), cloudcode.plan(&token));
+        let http = orbit.http()?;
+        let cloudcode = cloudcode::Client::new(&http, &orbit.install()?)?;
+        let plan = cloudcode.plan(&token).await;
+        let plan_kind = plan.as_ref().ok().map(|plan| plan.kind).or(saved_plan);
+        let groups = if plan_kind == Some(PlanKind::Free) {
+            Ok(None)
+        } else {
+            cloudcode.quota(&token).await.map(Some)
+        };
         Ok(Refresh { groups, plan })
     }
     .await;
@@ -77,7 +89,14 @@ fn apply_refresh(state: &mut Inner, account_id: &str, result: Result<Refresh>) {
         Ok(Refresh { groups, plan }) => {
             match plan {
                 Ok(plan) => {
-                    if let Err(err) = state.registry.set_plan(account_id, plan) {
+                    let is_known = plan.kind != PlanKind::Unknown;
+                    let has_saved = state
+                        .registry
+                        .get(account_id)
+                        .is_some_and(|a| a.plan.is_some());
+                    if (is_known || !has_saved)
+                        && let Err(err) = state.registry.set_plan(account_id, plan)
+                    {
                         log::warn!("could not save plan: {err}");
                     }
                 }
@@ -88,7 +107,8 @@ fn apply_refresh(state: &mut Inner, account_id: &str, result: Result<Refresh>) {
         Err(err) => Err(err),
     };
     let quota = match groups {
-        Ok(groups) => QuotaState::Ready {
+        Ok(None) => QuotaState::Free,
+        Ok(Some(groups)) => QuotaState::Ready {
             groups,
             fetched_at: Utc::now(),
             stale: false,
@@ -117,7 +137,6 @@ fn apply_refresh(state: &mut Inner, account_id: &str, result: Result<Refresh>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::google::cloudcode::PlanKind;
     use crate::model::Operation;
     use crate::registry::{Account, Registry};
 
@@ -145,6 +164,7 @@ mod tests {
                 registry,
                 quotas: Default::default(),
                 active_id: None,
+                identity_stale: false,
                 operation: Operation::Idle,
                 refreshing: false,
                 refreshed_at: None,
@@ -162,16 +182,15 @@ mod tests {
     }
 
     #[test]
-    fn quota_denied_still_saves_subscription_downgrade() {
+    fn free_plan_replaces_old_paid_quota_without_showing_an_error() {
         for has_previous_quota in [false, true] {
             let (dir, mut state) = state();
-            let previous_fetch = Utc::now() - chrono::Duration::minutes(5);
             if has_previous_quota {
                 state.quotas.insert(
                     "sample".into(),
                     QuotaState::Ready {
                         groups: Vec::new(),
-                        fetched_at: previous_fetch,
+                        fetched_at: Utc::now() - chrono::Duration::minutes(5),
                         stale: false,
                     },
                 );
@@ -180,23 +199,14 @@ mod tests {
                 &mut state,
                 "sample",
                 Ok(Refresh {
-                    groups: Err(Error::Http {
-                        endpoint: "retrieveUserQuotaSummary",
-                        status: 403,
-                    }),
+                    groups: Ok(None),
                     plan: free_plan(),
                 }),
             );
             assert_eq!(state.registry.get("sample").unwrap().plan, free_plan().ok());
             let saved = Registry::load(dir.path()).unwrap();
             assert_eq!(saved.get("sample").unwrap().plan, free_plan().ok());
-            match state.quotas.get("sample").unwrap() {
-                QuotaState::Ready { fetched_at, .. } if has_previous_quota => {
-                    assert_eq!(*fetched_at, previous_fetch);
-                }
-                QuotaState::Failed { .. } if !has_previous_quota => {}
-                other => panic!("unexpected quota state: {other:?}"),
-            }
+            assert!(matches!(state.quotas["sample"], QuotaState::Free));
         }
     }
 
@@ -208,7 +218,7 @@ mod tests {
             &mut state,
             "sample",
             Ok(Refresh {
-                groups: Ok(Vec::new()),
+                groups: Ok(Some(Vec::new())),
                 plan: Err(Error::Http {
                     endpoint: "loadCodeAssist",
                     status: 503,
@@ -242,7 +252,7 @@ mod tests {
             &mut state,
             "sample",
             Ok(Refresh {
-                groups: Ok(Vec::new()),
+                groups: Ok(None),
                 plan: free_plan(),
             }),
         );

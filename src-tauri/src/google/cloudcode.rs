@@ -192,9 +192,13 @@ fn parse_plan(load: LoadResponse) -> Plan {
             kind: PlanKind::Pro,
             name: tier.name,
         },
-        _ => Plan {
+        Some(tier) if matches!(tier.id.as_str(), "free-tier" | "free") => Plan {
             kind: PlanKind::Free,
             name: "Free".into(),
+        },
+        _ => Plan {
+            kind: PlanKind::Unknown,
+            name: String::new(),
         },
     }
 }

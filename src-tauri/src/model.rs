@@ -1,6 +1,7 @@
 //! View models sent to the frontend. The frontend renders `Snapshot` and
 //! never sees tokens.
 
+use crate::network::NetworkStatus;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -13,6 +14,7 @@ pub struct Snapshot {
     pub version: &'static str,
     pub accounts: Vec<AccountView>,
     pub client: ClientStatus,
+    pub network: NetworkStatus,
     pub operation: Operation,
     pub refreshing: bool,
     pub refreshed_at: Option<DateTime<Utc>>,
@@ -33,6 +35,7 @@ pub struct AccountView {
 #[serde(tag = "status", rename_all = "camelCase")]
 pub enum QuotaState {
     Loading,
+    Free,
     #[serde(rename_all = "camelCase")]
     Ready {
         groups: Vec<QuotaGroup>,
@@ -51,6 +54,7 @@ pub enum QuotaState {
 #[serde(rename_all = "camelCase")]
 pub struct ClientStatus {
     pub active_id: Option<String>,
+    pub identity_stale: bool,
     pub installed: bool,
     pub running: bool,
 }
@@ -141,7 +145,6 @@ pub enum ProcessKind {
     App,
     Helper,
     LanguageServer,
-    Cli,
 }
 
 #[derive(Debug, Clone, Serialize)]

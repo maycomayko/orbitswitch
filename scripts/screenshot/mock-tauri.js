@@ -35,7 +35,8 @@ const pro = { kind: "pro", name: "Google AI Pro" };
 const snapshot = {
   platform: "macos",
   version: "0.2.1",
-  client: { activeId: "ada", installed: true, running: true },
+  client: { activeId: "ada", identityStale: false, installed: true, running: true },
+  network: { localHttpProxyPort: null, invalid: false },
   operation:
     scene === "switching"
       ? {

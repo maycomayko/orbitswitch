@@ -1,0 +1,20 @@
+.network-fields {
+  display: grid;
+  gap: 8px;
+  padding: 0;
+  margin: 12px 0;
+  border: 0;
+}
+
+.network-fields label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.network-fields input,
+.network-fields select {
+  width: 150px;
+  font: inherit;
+}

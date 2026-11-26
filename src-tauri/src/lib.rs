@@ -7,6 +7,7 @@ mod commands;
 mod error;
 mod google;
 mod model;
+mod network;
 mod provider;
 mod quota;
 mod registry;
@@ -58,6 +59,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::get_snapshot,
             commands::refresh,
+            commands::test_network,
+            commands::save_network,
             commands::add_account,
             commands::cancel_add_account,
             commands::copy_sign_in_link,

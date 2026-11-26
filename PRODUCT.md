@@ -8,7 +8,7 @@ Antigravity subscriptions and view their coding quotas. See [design](docs/design
   Removing a saved account only removes it from OrbitSwitch.
 - Switch manually. Before closing Antigravity or its related processes, show a confirmation.
   Verify the target, save the outgoing sign-in, write and read back both credential copies,
-  and reopen the official desktop app. Reopen CLI sessions manually.
+  and reopen the official desktop app.
 - Restore the prior credential copies if a write or readback fails. A rollback failure leaves the
   client closed. A launch failure after a verified write reports that the account changed.
 - Show reported quota windows and reset times. Preserve the last good quota as stale after a

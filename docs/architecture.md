@@ -82,11 +82,12 @@ failure. A default-browser launch failure keeps the copy action available.
    On `invalid_grant`, mark the target account `Reauth` and end the operation.
 2. Resolve the outgoing live identity and save its refresh token to `vault.rs` when it matches a
    saved account.
-3. **Closing**: stop Antigravity, its helpers, language server and `agy` CLI (`SIGTERM` / `taskkill`,
-   then force-kill after 8 s).
+3. **Closing**: request desktop exit and wait for the selected installation’s bundled processes.
+   If they remain running after 8 s, ask the user to close the desktop app before changing credentials.
 4. **Writing**: write keychain and `~/.gemini/jetski-standalone-oauth-token`, read back and verify;
    restore the previous credential and relaunch on failure.
-5. **Launching**: open Antigravity and wait for its main process.
+5. **Launching**: reopen Antigravity and confirm the saved sign-in still matches the target. Treat
+   failure to save OrbitSwitch’s local bookkeeping separately from the desktop launch.
 
 ## Persistence
 

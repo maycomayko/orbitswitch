@@ -11,6 +11,7 @@ import "./account-card.css";
 interface Props {
   account: Account;
   active: boolean;
+  lastKnown: boolean;
   best: boolean;
   disabled: boolean;
 
@@ -38,6 +39,12 @@ function recoveryHint(groups: QuotaGroup[]): string | null {
 function QuotaBody({ account, onReauth }: Pick<Props, "account" | "onReauth">) {
   const { quota } = account;
   switch (quota.status) {
+    case "free":
+      return (
+        <div className="card-quota">
+          <span className="card-hint">{t("quota.free")}</span>
+        </div>
+      );
     case "loading":
       return (
         <div className="card-quota" aria-busy="true">
@@ -84,6 +91,7 @@ function QuotaBody({ account, onReauth }: Pick<Props, "account" | "onReauth">) {
 export function AccountCard({
   account,
   active,
+  lastKnown,
   best,
   disabled,
 
@@ -112,6 +120,7 @@ export function AccountCard({
             name,
             account.plan?.kind.toUpperCase(),
             active && t("account.current"),
+            lastKnown && t("account.lastKnown"),
             !active && best && t("account.best"),
             canSwitch ? t("account.switchTo", { email: account.email }) : account.email,
           ]
@@ -128,6 +137,7 @@ export function AccountCard({
             <span className="truncate">{name}</span>
             <PlanBadge plan={account.plan} />
             {active && <span className="tag tag-current">{t("account.current")}</span>}
+            {lastKnown && <span className="tag tag-current">{t("account.lastKnown")}</span>}
             {!active && best && <span className="tag tag-best">{t("account.best")}</span>}
           </span>
           <span className="card-email truncate">{account.email}</span>

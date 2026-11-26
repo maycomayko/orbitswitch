@@ -43,13 +43,14 @@ async function popup(entries: Entry[], at: LogicalPosition) {
   await menu.popup(at);
 }
 
-export async function showAppMenu(event: MouseEvent, version: string) {
+export async function showAppMenu(event: MouseEvent, version: string, onNetwork: () => void) {
   const at = anchor(event);
   const launchAtLogin = await ipc.autostartEnabled().catch(() => false);
   await popup(
     [
       { text: `OrbitSwitch ${version}`, enabled: false },
       "separator",
+      { text: t("network.title"), action: onNetwork },
       {
         text: t("menu.launchAtLogin"),
         checked: launchAtLogin,

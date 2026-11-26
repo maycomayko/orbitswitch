@@ -214,7 +214,7 @@ impl Registry {
     }
 }
 
-fn write_file(path: &Path, bytes: &[u8]) -> Result<()> {
+pub(crate) fn write_file(path: &Path, bytes: &[u8]) -> Result<()> {
     use std::io::Write;
 
     let dir = path.parent().expect("registry path has a parent");

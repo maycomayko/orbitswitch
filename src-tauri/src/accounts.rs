@@ -27,6 +27,7 @@ pub async fn add(orbit: &Arc<Orbit>) -> Result<String> {
         can_copy_link: false,
     })?;
     let sync = orbit.sync_lock.lock().await;
+    let http = orbit.http()?;
     let client = orbit.oauth_client().await?;
     let loopback = Loopback::bind().await?;
     let redirect_uri = loopback.redirect_uri.clone();
@@ -47,14 +48,12 @@ pub async fn add(orbit: &Arc<Orbit>) -> Result<String> {
     // Retire the link before token exchange so it cannot be copied after use.
     orbit.cancel_pending_auth();
 
-    let grant =
-        oauth::exchange_code(&orbit.http, &client, &code, &pkce.verifier, &redirect_uri).await?;
+    let grant = oauth::exchange_code(&http, &client, &code, &pkce.verifier, &redirect_uri).await?;
     let refresh_token = grant
         .refresh_token
         .clone()
         .ok_or_else(|| Error::Invalid("Google returned no refresh token".into()))?;
-    let profile =
-        oauth::profile(&orbit.http, &grant.access_token, grant.id_token.as_deref()).await?;
+    let profile = oauth::profile(&http, &grant.access_token, grant.id_token.as_deref()).await?;
     vault::set(&profile.id, &refresh_token)?;
     orbit
         .tokens
@@ -109,21 +108,34 @@ pub async fn sync_live(orbit: &Arc<Orbit>) -> Result<()> {
         .await
         .map_err(|err| Error::Invalid(err.to_string()))??
     else {
-        orbit.update(|state| state.active_id = None);
+        orbit.update(|state| {
+            state.active_id = None;
+            state.identity_stale = false;
+        });
         return Ok(());
     };
     let refresh_token = &bundle.token.refresh_token;
     let fingerprint = registry::fingerprint(refresh_token);
     let is_new_sign_in = !refresh_token.is_empty()
         && orbit.state().registry.live_fingerprint() != Some(fingerprint.as_str());
-    if !is_new_sign_in && let Some(claims) = bundle.claims() {
-        orbit.update(|state| state.active_id = Some(claims.sub));
+    let cached_id = (!is_new_sign_in && !refresh_token.is_empty())
+        .then(|| orbit.state().active_id.clone())
+        .flatten();
+    if let Some(id) = cached_id.or_else(|| {
+        (!is_new_sign_in)
+            .then(|| bundle.claims().map(|claims| claims.sub))
+            .flatten()
+    }) {
+        orbit.update(|state| {
+            state.active_id = Some(id);
+            state.identity_stale = false;
+        });
         return Ok(());
     }
-    let profile = match bundle.profile(&orbit.http).await {
+    let profile = match async { bundle.profile(&orbit.http()?).await }.await {
         Ok(profile) => profile,
         Err(error) => {
-            orbit.update(|state| state.active_id = None);
+            orbit.update(|state| state.identity_stale = state.active_id.is_some());
             return Err(error);
         }
     };
@@ -137,7 +149,10 @@ pub async fn sync_live(orbit: &Arc<Orbit>) -> Result<()> {
         })?;
         log::info!("adopted the account signed in to Antigravity");
     }
-    orbit.update(|state| state.active_id = Some(profile.id));
+    orbit.update(|state| {
+        state.active_id = Some(profile.id);
+        state.identity_stale = false;
+    });
     Ok(())
 }
 

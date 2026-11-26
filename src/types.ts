@@ -36,6 +36,7 @@ export interface Plan {
 
 export type QuotaState =
   | { status: "loading" }
+  | { status: "free" }
   | { status: "ready"; groups: QuotaGroup[]; fetchedAt: string; stale: boolean }
   | { status: "failed"; code: string; message: string }
   | { status: "reauth" };
@@ -65,11 +66,12 @@ export interface Snapshot {
   accounts: Account[];
   operation: Operation;
   client: ClientStatus;
+  network: NetworkStatus;
   refreshing: boolean;
   refreshedAt: string | null;
 }
 
-export type ProcessKind = "app" | "helper" | "languageServer" | "cli";
+export type ProcessKind = "app" | "helper" | "languageServer";
 
 export interface RelatedProcess {
   pid: number;
@@ -84,6 +86,15 @@ export interface BackendError {
 
 export interface ClientStatus {
   activeId: string | null;
+  identityStale: boolean;
   installed: boolean;
   running: boolean;
+}
+
+export interface NetworkSettings {
+  localHttpProxyPort: number | null;
+}
+
+export interface NetworkStatus extends NetworkSettings {
+  invalid: boolean;
 }

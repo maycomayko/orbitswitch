@@ -7,6 +7,7 @@ import { ConfirmSheet } from "./components/confirm-sheet";
 import { EmptyState } from "./components/empty-state";
 import { Footer } from "./components/footer";
 import { Header } from "./components/header";
+import { NetworkSheet } from "./components/network-sheet";
 import { ResultSheet } from "./components/result-sheet";
 import { displayName } from "./format";
 import { useAutosize } from "./hooks/use-autosize";
@@ -20,22 +21,18 @@ import type { Account, ProcessKind, RelatedProcess } from "./types";
 import "./app.css";
 
 type Dialog =
+  | { kind: "network" }
   | { kind: "switch"; account: Account; processes: RelatedProcess[] }
   | { kind: "remove"; account: Account }
   | { kind: "stop" | "restart"; processes: RelatedProcess[] }
   | { kind: "result"; tone: "success" | "error"; message: string };
 
-const PROCESS_ORDER: ProcessKind[] = ["app", "languageServer", "helper", "cli"];
+const PROCESS_ORDER: ProcessKind[] = ["app", "languageServer", "helper"];
 
 function describeProcesses(processes: RelatedProcess[]): string | null {
   const kinds = PROCESS_ORDER.filter((kind) => processes.some((p) => p.kind === kind));
   if (!kinds.length) return null;
-  const list = kinds.map((kind) => {
-    const count = processes.filter((p) => p.kind === kind).length;
-    return kind === "cli" && count > 1
-      ? `${t("process.cli", antigravity)} ×${count}`
-      : t(`process.${kind}`, antigravity);
-  });
+  const list = kinds.map((kind) => t(`process.${kind}`, antigravity));
   return t("confirm.processes", { list: list.join(" · ") });
 }
 
@@ -76,7 +73,7 @@ export function App() {
 
   const busy = snapshot.operation.kind !== "idle";
   const status = snapshot.client;
-  const best = bestAccountId(snapshot.accounts, status.activeId);
+  const best = status.identityStale ? null : bestAccountId(snapshot.accounts, status.activeId);
   // The account in use leads the list; the rest keep the order they were added in.
   const accounts = [...snapshot.accounts].sort(
     (a, b) => Number(b.id === status.activeId) - Number(a.id === status.activeId),
@@ -95,7 +92,7 @@ export function App() {
   };
 
   const confirmDialog = () => {
-    if (!dialog || dialog.kind === "result") return;
+    if (!dialog || dialog.kind === "result" || dialog.kind === "network") return;
     setDialog(null);
     switch (dialog.kind) {
       case "switch": {
@@ -132,7 +129,7 @@ export function App() {
         snapshot={snapshot}
         status={status}
         onRefresh={() => ipc.refresh(true).catch(fail)}
-        onMore={(event) => showAppMenu(event, snapshot.version)}
+        onMore={(event) => showAppMenu(event, snapshot.version, () => setDialog({ kind: "network" }))}
       />
 
       <div className="accounts-panel">
@@ -144,7 +141,8 @@ export function App() {
               <AccountCard
                 key={account.id}
                 account={account}
-                active={account.id === status.activeId}
+                active={account.id === status.activeId && !status.identityStale}
+                lastKnown={account.id === status.activeId && status.identityStale}
                 best={account.id === best}
                 disabled={busy || !status.installed}
                 onSwitch={() => askSwitch(account).catch(fail)}
@@ -170,6 +168,8 @@ export function App() {
           onCancelAdd={() => ipc.cancelAddAccount()}
           onCopySignInLink={ipc.copySignInLink}
         />
+      ) : dialog?.kind === "network" ? (
+        <NetworkSheet status={snapshot.network} onClose={closeDialog} />
       ) : dialog?.kind === "result" ? (
         <ResultSheet tone={dialog.tone} message={dialog.message} onClose={closeDialog} />
       ) : dialog?.kind === "switch" ? (

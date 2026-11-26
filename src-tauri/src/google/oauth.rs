@@ -11,7 +11,7 @@ use crate::error::{Error, Result};
 
 pub const AUTH_ENDPOINT: &str = "https://accounts.google.com/o/oauth2/v2/auth";
 pub const TOKEN_ENDPOINT: &str = "https://oauth2.googleapis.com/token";
-const USERINFO_ENDPOINT: &str = "https://www.googleapis.com/oauth2/v2/userinfo";
+pub(crate) const USERINFO_ENDPOINT: &str = "https://www.googleapis.com/oauth2/v2/userinfo";
 
 /// Scopes requested by Antigravity's OAuth sign-in.
 pub const SCOPES: [&str; 7] = [

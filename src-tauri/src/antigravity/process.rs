@@ -1,9 +1,7 @@
 //! Finding, stopping and launching Antigravity processes.
 //!
-//! Every process that may hold the signed-in credential has to exit before a
-//! switch: the IDE, its helpers and language server, and the `agy` CLI. Any
-//! of them could otherwise write the previous account back when it refreshes
-//! its token.
+//! A switch waits for the selected desktop installation and its bundled helpers
+//! to close before changing credentials.
 
 use std::path::Path;
 use std::time::{Duration, Instant};
@@ -15,7 +13,6 @@ use crate::error::{Error, Result};
 pub use crate::model::{ProcessKind, RelatedProcess};
 
 const GRACEFUL_TIMEOUT: Duration = Duration::from_secs(8);
-const FORCE_TIMEOUT: Duration = Duration::from_secs(3);
 const LAUNCH_TIMEOUT: Duration = Duration::from_secs(15);
 const POLL: Duration = Duration::from_millis(250);
 
@@ -32,11 +29,8 @@ fn snapshot() -> System {
 fn classify(install: Option<&Install>, process: &Process) -> Option<ProcessKind> {
     let exe = process.exe()?;
     let file_name = exe.file_name()?.to_string_lossy().to_ascii_lowercase();
-    if file_name == "agy" || file_name == "agy.exe" {
-        return Some(ProcessKind::Cli);
-    }
     let install = install?;
-    if !install.contains(exe) {
+    if !install.contains(exe) || matches!(file_name.as_str(), "agy" | "agy.exe") {
         return None;
     }
     Some(if exe == install.main_exe {
@@ -71,28 +65,17 @@ pub fn is_app_running(install: Option<&Install>) -> bool {
     scan(install).iter().any(|p| p.kind == ProcessKind::App)
 }
 
-/// Asks the IDE and CLI to quit, then force-kills whatever is left.
+/// Requests desktop exit; a stuck process aborts the switch before any write.
 pub async fn stop_all(install: Option<&Install>) -> Result<()> {
     let system = snapshot();
     for (pid, kind) in related(&system, install) {
-        if matches!(kind, ProcessKind::App | ProcessKind::Cli)
+        if kind == ProcessKind::App
             && let Some(process) = system.process(pid)
         {
             request_exit(process);
         }
     }
     if wait_until(GRACEFUL_TIMEOUT, || scan(install).is_empty()).await {
-        return Ok(());
-    }
-    let system = snapshot();
-    let survivors = related(&system, install);
-    log::warn!("force-killing {} Antigravity process(es)", survivors.len());
-    for (pid, _) in &survivors {
-        if let Some(process) = system.process(*pid) {
-            process.kill();
-        }
-    }
-    if wait_until(FORCE_TIMEOUT, || scan(install).is_empty()).await {
         Ok(())
     } else {
         Err(Error::ProcessStuck(scan(install).len()))
@@ -124,7 +107,7 @@ async fn wait_until(timeout: Duration, mut done: impl FnMut() -> bool) -> bool {
 
 #[cfg(unix)]
 fn request_exit(process: &Process) {
-    // SIGTERM lets Electron and the CLI shut down cleanly; an Apple Event
+    // SIGTERM lets Electron shut down; an Apple Event
     // quit could block on dialogs and needs Automation permission.
     process.kill_with(sysinfo::Signal::Term);
 }
@@ -135,7 +118,7 @@ fn request_exit(process: &Process) {
     use windows_sys::Win32::System::Threading::CREATE_NO_WINDOW;
     // Without /F, taskkill posts WM_CLOSE so the app can close its windows.
     let _ = std::process::Command::new("taskkill")
-        .args(["/PID", &process.pid().as_u32().to_string(), "/T"])
+        .args(["/PID", &process.pid().as_u32().to_string()])
         .creation_flags(CREATE_NO_WINDOW)
         .status();
 }

@@ -3,8 +3,7 @@
 [简体中文](README.zh-CN.md) · [Compatibility and verification](docs/status.md)
 
 A menu bar and tray utility for switching between your own Antigravity subscriptions. See the
-current account, remaining quota, and reset times. The app manages Antigravity Desktop and
-its related `agy` CLI processes.
+current account, remaining quota, and reset times. The app manages Antigravity Desktop.
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/hero-dark.png"><img src="assets/screenshots/hero-light.png" width="640" alt="Antigravity account list in OrbitSwitch"></picture>
 
@@ -20,5 +19,9 @@ Claude and GPT models. OrbitSwitch never contacts those standalone services.
 
 Saved Antigravity accounts from earlier builds are preserved. Install a newer fork build manually
 to upgrade. See [build instructions](docs/release.md) and [credential storage](SECURITY.md).
+
+Use **⋯ → Network settings** to follow your system network or set a local HTTP proxy port.
+The connection test checks Google before saving. The setting only applies to OrbitSwitch's
+requests, and takes effect immediately.
 
 MIT. Based on [upstream OrbitSwitch](https://github.com/shengyy/orbitswitch). Unaffiliated with Google.

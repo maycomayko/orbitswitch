@@ -205,3 +205,11 @@ fn parses_starter_paid_tier_as_free() {
         }
     );
 }
+
+#[test]
+fn missing_or_unfamiliar_tiers_are_not_assumed_to_be_free() {
+    for body in [r#"{}"#, r#"{"paidTier":{"id":"future-tier"}}"#] {
+        let load = serde_json::from_str(body).unwrap();
+        assert_eq!(parse_plan(load).kind, PlanKind::Unknown);
+    }
+}
