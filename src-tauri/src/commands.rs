@@ -9,7 +9,7 @@ use tauri_plugin_opener::OpenerExt;
 
 use crate::antigravity::process;
 use crate::error::{Error, Result};
-use crate::model::{RelatedProcess, Snapshot};
+use crate::model::{QuotaState, RelatedProcess, Snapshot};
 use crate::network::{self, NetworkSettings};
 use crate::state::Orbit;
 use crate::{accounts, autostart, quota, scheduler, shell, switcher};
@@ -30,6 +30,34 @@ pub async fn refresh(orbit: Shared<'_>, force: bool) -> Result<()> {
         scheduler::tick(&orbit).await;
     } else {
         quota::refresh_if_stale(&orbit, STALE_AFTER).await;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn set_usage_enabled(orbit: Shared<'_>, enabled: bool) -> Result<()> {
+    if !orbit.is_idle() {
+        return Err(Error::Busy);
+    }
+    let sync = orbit.sync_lock.lock().await;
+    if !orbit.is_idle() {
+        return Err(Error::Busy);
+    }
+    let changed = orbit.update(|state| -> Result<bool> {
+        if state.registry.usage_enabled() == enabled {
+            return Ok(false);
+        }
+        state.registry.set_usage_enabled(enabled)?;
+        state.refreshed_at = None;
+        state
+            .quotas
+            .retain(|_, quota| matches!(quota, QuotaState::Reauth));
+        Ok(true)
+    })?;
+    drop(sync);
+    if changed && enabled {
+        let orbit = Arc::clone(&orbit);
+        tauri::async_runtime::spawn(async move { scheduler::tick(&orbit).await });
     }
     Ok(())
 }

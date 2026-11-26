@@ -7,6 +7,7 @@ import type { BackendError, NetworkSettings, RelatedProcess, Snapshot } from "./
 export const ipc = {
   snapshot: () => invoke<Snapshot>("get_snapshot"),
   refresh: (force: boolean) => invoke<void>("refresh", { force }),
+  setUsageEnabled: (enabled: boolean) => invoke<void>("set_usage_enabled", { enabled }),
   testNetwork: (settings: NetworkSettings) => invoke<void>("test_network", { settings }),
   saveNetwork: (settings: NetworkSettings) => invoke<void>("save_network", { settings }),
   addAccount: () => invoke<string>("add_account"),

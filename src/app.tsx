@@ -22,6 +22,7 @@ import "./app.css";
 
 type Dialog =
   | { kind: "network" }
+  | { kind: "enableUsage" }
   | { kind: "switch"; account: Account; processes: RelatedProcess[] }
   | { kind: "remove"; account: Account }
   | { kind: "stop" | "restart"; processes: RelatedProcess[] }
@@ -108,6 +109,9 @@ export function App() {
       case "remove":
         ipc.removeAccount(dialog.account.id).catch(fail);
         break;
+      case "enableUsage":
+        ipc.setUsageEnabled(true).catch(fail);
+        break;
       case "stop":
         ipc.stopClient().catch(fail);
         break;
@@ -125,41 +129,51 @@ export function App() {
 
   return (
     <div ref={panel} className={`panel platform-${snapshot.platform}`}>
-      <Header
-        snapshot={snapshot}
-        status={status}
-        onRefresh={() => ipc.refresh(true).catch(fail)}
-        onMore={(event) => showAppMenu(event, snapshot.version, () => setDialog({ kind: "network" }))}
-      />
+      <div className="panel-content">
+        <Header
+          snapshot={snapshot}
+          status={status}
+          onRefresh={() => ipc.refresh(true).catch(fail)}
+          onMore={(event) =>
+            showAppMenu(event, snapshot, {
+              onNetwork: () => setDialog({ kind: "network" }),
+              onToggleUsage: () => {
+                if (snapshot.usageEnabled) ipc.setUsageEnabled(false).catch(fail);
+                else setDialog({ kind: "enableUsage" });
+              },
+            }).catch(fail)
+          }
+        />
 
-      <div className="accounts-panel">
-        {accounts.length === 0 ? (
-          <EmptyState disabled={busy || !status.installed} onAdd={addAccount} client={antigravity.client} />
-        ) : (
-          <main className="account-list">
-            {accounts.map((account) => (
-              <AccountCard
-                key={account.id}
-                account={account}
-                active={account.id === status.activeId && !status.identityStale}
-                lastKnown={account.id === status.activeId && status.identityStale}
-                best={account.id === best}
-                disabled={busy || !status.installed}
-                onSwitch={() => askSwitch(account).catch(fail)}
-                onReauth={addAccount}
-                onMenu={(event) => accountMenu(event, account)}
-              />
-            ))}
-          </main>
-        )}
+        <div className="accounts-panel">
+          {accounts.length === 0 ? (
+            <EmptyState disabled={busy || !status.installed} onAdd={addAccount} client={antigravity.client} />
+          ) : (
+            <main className="account-list">
+              {accounts.map((account) => (
+                <AccountCard
+                  key={account.id}
+                  account={account}
+                  active={account.id === status.activeId && !status.identityStale}
+                  lastKnown={account.id === status.activeId && status.identityStale}
+                  best={account.id === best}
+                  disabled={busy || !status.installed}
+                  onSwitch={() => askSwitch(account).catch(fail)}
+                  onReauth={addAccount}
+                  onMenu={(event) => accountMenu(event, account)}
+                />
+              ))}
+            </main>
+          )}
+        </div>
+        <Footer
+          status={status}
+          busy={busy}
+          onAdd={addAccount}
+          onRestart={() => askClient("restart").catch(fail)}
+          onStop={() => askClient("stop").catch(fail)}
+        />
       </div>
-      <Footer
-        status={status}
-        busy={busy}
-        onAdd={addAccount}
-        onRestart={() => askClient("restart").catch(fail)}
-        onStop={() => askClient("stop").catch(fail)}
-      />
 
       {snapshot.operation.kind !== "idle" ? (
         <ActivitySheet
@@ -170,6 +184,16 @@ export function App() {
         />
       ) : dialog?.kind === "network" ? (
         <NetworkSheet status={snapshot.network} onClose={closeDialog} />
+      ) : dialog?.kind === "enableUsage" ? (
+        <ConfirmSheet
+          title={t("usage.title")}
+          body={t("usage.risk")}
+          note={t("usage.refresh")}
+          action={t("usage.enable")}
+          focusCancel
+          onConfirm={confirmDialog}
+          onCancel={closeDialog}
+        />
       ) : dialog?.kind === "result" ? (
         <ResultSheet tone={dialog.tone} message={dialog.message} onClose={closeDialog} />
       ) : dialog?.kind === "switch" ? (

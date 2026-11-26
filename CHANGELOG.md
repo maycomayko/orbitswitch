@@ -6,6 +6,18 @@ All notable changes to OrbitSwitch are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-11-26
+
+### Changed
+
+- Turn off Antigravity plan and quota requests for new and upgrading users. To start querying, enable
+  **Show plans and quota** in the app menu and confirm the account-risk notice. This preference is
+  saved across restarts. The quota refresh button appears only when this setting is enabled.
+
+### Fixed
+
+- Fit the macOS menu bar window to the visible account list or dialog and resize it again on reopen.
+
 ## [0.4.0] - 2026-11-26
 
 ### Removed

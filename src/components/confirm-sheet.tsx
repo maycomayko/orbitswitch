@@ -8,27 +8,37 @@ interface Props {
   note?: string | null;
   action: string;
   destructive?: boolean;
+  focusCancel?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
-export function ConfirmSheet({ title, body, note, action, destructive, onConfirm, onCancel }: Props) {
-  const primary = useRef<HTMLButtonElement>(null);
-  useEffect(() => primary.current?.focus(), []);
+export function ConfirmSheet({
+  title,
+  body,
+  note,
+  action,
+  destructive,
+  focusCancel,
+  onConfirm,
+  onCancel,
+}: Props) {
+  const initialFocus = useRef<HTMLButtonElement>(null);
+  useEffect(() => initialFocus.current?.focus(), []);
   return (
-    <Sheet onDismiss={onCancel} onConfirm={onConfirm}>
+    <Sheet onDismiss={onCancel} onConfirm={focusCancel ? undefined : onConfirm}>
       <h2>{title}</h2>
       <p>{body}</p>
       {note && <p className="sheet-note">{note}</p>}
       <SheetActions>
-        <button type="button" className="btn" onClick={onCancel}>
+        <button type="button" className="btn" onClick={onCancel} ref={focusCancel ? initialFocus : undefined}>
           {t("confirm.cancel")}
         </button>
         <button
           type="button"
           className={destructive ? "btn btn-danger" : "btn btn-primary"}
           onClick={onConfirm}
-          ref={primary}
+          ref={focusCancel ? undefined : initialFocus}
         >
           {action}
         </button>

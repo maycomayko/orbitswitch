@@ -35,6 +35,7 @@ export interface Plan {
 }
 
 export type QuotaState =
+  | { status: "disabled" }
   | { status: "loading" }
   | { status: "free" }
   | { status: "ready"; groups: QuotaGroup[]; fetchedAt: string; stale: boolean }
@@ -67,6 +68,7 @@ export interface Snapshot {
   operation: Operation;
   client: ClientStatus;
   network: NetworkStatus;
+  usageEnabled: boolean;
   refreshing: boolean;
   refreshedAt: string | null;
 }

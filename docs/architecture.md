@@ -35,7 +35,7 @@ severity and recommendations from the snapshot.
 | `switcher.rs` | Antigravity account switch, stop and restart |
 | `transaction.rs` | Shared rollback handling for client credential writes |
 | `quota.rs` | Concurrent quota and plan refresh |
-| `scheduler.rs` | 5-minute sign-in and quota refresh |
+| `scheduler.rs` | 5-minute sign-in sync and opt-in quota refresh |
 | `autostart.rs` | Open at Login (SMAppService on macOS, Run key on Windows) |
 | `registry.rs` | Account metadata and fingerprints in `accounts.json` |
 | `registry_migration.rs` / `registry_migration_tests.rs` | One-time storage transfer before startup, copy journal, destination verification and resumable source cleanup |

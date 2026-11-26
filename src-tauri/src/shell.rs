@@ -143,7 +143,7 @@ pub fn resize(app: &AppHandle, height: f64) {
     if let Some(window) = app.get_webview_window(LABEL) {
         let _ = window.set_size(tauri::LogicalSize::new(
             PANEL_WIDTH,
-            height.clamp(200.0, 720.0),
+            height.clamp(1.0, 720.0),
         ));
         if window.is_visible().unwrap_or(false) {
             let _ = window.move_window_constrained(Position::TrayBottomCenter);

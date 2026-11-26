@@ -59,6 +59,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::get_snapshot,
             commands::refresh,
+            commands::set_usage_enabled,
             commands::test_network,
             commands::save_network,
             commands::add_account,

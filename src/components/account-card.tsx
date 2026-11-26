@@ -39,6 +39,8 @@ function recoveryHint(groups: QuotaGroup[]): string | null {
 function QuotaBody({ account, onReauth }: Pick<Props, "account" | "onReauth">) {
   const { quota } = account;
   switch (quota.status) {
+    case "disabled":
+      return null;
     case "free":
       return (
         <div className="card-quota">

@@ -4,7 +4,6 @@
 
 const params = new URLSearchParams(location.search);
 const scene = params.get("scene") ?? "list";
-const chinese = params.get("lang")?.startsWith("zh");
 if (scene === "hero") document.documentElement.classList.add("readme-demo");
 // Screenshots are English regardless of the machine's language.
 Object.defineProperty(Navigator.prototype, "language", { get: () => params.get("lang") ?? "en-US" });
@@ -39,6 +38,7 @@ const snapshot = {
   version: "0.2.1",
   client: { activeId: "ada", identityStale: false, installed: true, running: true },
   network: { localHttpProxyPort: null, invalid: false },
+  usageEnabled: true,
   operation:
     scene === "switching"
       ? {
@@ -86,21 +86,13 @@ if (scene === "stale") {
 }
 if (scene === "empty") snapshot.accounts = [];
 if (scene === "hero") {
-  snapshot.accounts = [
-    {
-      ...snapshot.accounts[0],
-      email: "free@example.com",
-      name: chinese ? "演示 Free" : "Demo Free",
-      plan: { kind: "free", name: "Free" },
-      quota: { status: "free" },
-    },
-    {
-      ...snapshot.accounts[1],
-      email: "pro@example.com",
-      name: chinese ? "演示 Pro" : "Demo Pro",
-      quota: quota([0.74, 0.9, 2 * HOUR, 40 * HOUR], [0.51, 0.82, 4 * HOUR, 40 * HOUR]),
-    },
-  ];
+  snapshot.usageEnabled = false;
+  snapshot.refreshedAt = null;
+  snapshot.accounts = snapshot.accounts.slice(0, 2).map((account) => ({
+    ...account,
+    plan: null,
+    quota: { status: "disabled" },
+  }));
 }
 window.__orbitDemo = { calls: [], snapshot };
 const processes = [

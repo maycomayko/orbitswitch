@@ -10,7 +10,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import type { MouseEvent } from "react";
 import { t } from "./i18n";
 import { ipc } from "./ipc";
-import type { Account } from "./types";
+import type { Account, Snapshot } from "./types";
 
 const REPOSITORY = "https://github.com/maycomayko/orbitswitch/tree/antigravity-2.35.2";
 
@@ -43,14 +43,25 @@ async function popup(entries: Entry[], at: LogicalPosition) {
   await menu.popup(at);
 }
 
-export async function showAppMenu(event: MouseEvent, version: string, onNetwork: () => void) {
+interface AppActions {
+  onNetwork: () => void;
+  onToggleUsage: () => void;
+}
+
+export async function showAppMenu(event: MouseEvent, snapshot: Snapshot, actions: AppActions) {
   const at = anchor(event);
   const launchAtLogin = await ipc.autostartEnabled().catch(() => false);
   await popup(
     [
-      { text: `OrbitSwitch ${version}`, enabled: false },
+      { text: `OrbitSwitch ${snapshot.version}`, enabled: false },
       "separator",
-      { text: t("network.title"), action: onNetwork },
+      { text: t("network.title"), action: actions.onNetwork },
+      {
+        text: t("menu.usage"),
+        checked: snapshot.usageEnabled,
+        enabled: snapshot.operation.kind === "idle",
+        action: actions.onToggleUsage,
+      },
       {
         text: t("menu.launchAtLogin"),
         checked: launchAtLogin,

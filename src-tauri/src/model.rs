@@ -15,6 +15,7 @@ pub struct Snapshot {
     pub accounts: Vec<AccountView>,
     pub client: ClientStatus,
     pub network: NetworkStatus,
+    pub usage_enabled: bool,
     pub operation: Operation,
     pub refreshing: bool,
     pub refreshed_at: Option<DateTime<Utc>>,
@@ -34,6 +35,7 @@ pub struct AccountView {
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "status", rename_all = "camelCase")]
 pub enum QuotaState {
+    Disabled,
     Loading,
     Free,
     #[serde(rename_all = "camelCase")]

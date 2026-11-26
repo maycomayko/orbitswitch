@@ -11,8 +11,9 @@ Antigravity subscriptions and view their coding quotas. See [design](docs/design
   and reopen the official desktop app.
 - Restore the prior credential copies if a write or readback fails. A rollback failure leaves the
   client closed. A launch failure after a verified write reports that the account changed.
-- Show reported quota windows and reset times. Preserve the last good quota as stale after a
-  transient failure. Mark reauthorization when Google revokes a grant.
+- Ask for explicit opt-in before querying plans and quota. When enabled, show reported quota
+  windows and reset times, and mark the last good quota as stale after a transient failure.
+  Mark reauthorization when Google revokes a grant.
 - Support macOS 26+ and Windows 10/11 x64. Install updates to this fork manually.
 
 This fork only manages Antigravity. It has no model proxy, relay, account pool, automatic rotation,
