@@ -30,10 +30,13 @@ Update this page in the same PR whenever verification scope changes.
   - On 2.32.2 (macOS 27.2.1), the identity resolver used Google UserInfo for a live credential
     without usable ID-token claims. The same access token returned the account's plan and quota.
     Switching such a session in the installed app remains **not verified**.
-  - On 2.35.2 (macOS 27), a read-only probe resolved the bundled version and decoded the native
-    personal sign-in, which has an account email and can omit the raw ID token. Switching between
-    two live accounts and reopening their projects, conversations, and authorized tools remain
-    **not verified**.
+  - On 2.35.2 (macOS 27.2.1), a read-only probe resolved the bundled version and decoded the
+    native personal sign-in, which can include an account email without a raw ID token.
+  - On that installation, the user added a second Google account through OrbitSwitch. The
+    existing Free account remained current, and the added Pro account showed five-hour and
+    weekly windows for both the Gemini and shared quota pools.
+  - Switching between these accounts and reopening projects, conversations, and authorized
+    tools remain **not verified**.
   - The fork skips quota queries for confirmed Free accounts while continuing to refresh their
     plans. Network settings can use system networking or an optional local HTTP proxy.
   - Native menus, clipboard copy and Open at Login through SMAppService.
