@@ -19,6 +19,7 @@ mod switcher;
 #[cfg(test)]
 mod system_tests;
 mod tokens;
+mod transaction;
 mod tray;
 mod updater;
 mod vault;

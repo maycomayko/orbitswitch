@@ -31,6 +31,10 @@ Update this page in the same PR whenever verification scope changes.
   - On 2.32.2 (macOS 27.2.1), the identity resolver used Google UserInfo for a live credential
     without usable ID-token claims. The same access token returned the account's plan and quota.
     Switching such a session in the installed app remains **not verified**.
+  - On 2.35.2 (macOS 27), a read-only probe resolved the bundled version and decoded the native
+    personal sign-in, which has an account email and can omit the raw ID token. Switching between
+    two live accounts and reopening their projects, conversations, and authorized tools remain
+    **not verified**.
   - Independent plan and quota handling: an expired Pro account updates to `Free` even when quota
     returns HTTP 403.
   - Native menus, clipboard copy and Open at Login through SMAppService.
@@ -67,7 +71,9 @@ Update this page in the same PR whenever verification scope changes.
   cases cover reset times, distinguishing empty groups from exhausted windows, and preserving
   additional reported groups outside account rankings.
 - **Antigravity identity**: synthetic coverage verifies missing or unreadable ID tokens, the
-  ID-token fallback, rejection of an unresolved identity, and retrying a failed fingerprint write.
+  ID-token fallback, rejection of an unresolved identity, retrying a failed fingerprint write,
+  writing the verified email without an ID token, and restoring different keyring and fallback
+  states when readback fails.
 - **Account storage upgrades**: merging earlier and current registries, retaining current grants and
   desktop bindings, honoring explicit native-account removals, original Google-only metadata,
   malformed/unsupported source rejection, missing grants, failed token writes/readback, failed

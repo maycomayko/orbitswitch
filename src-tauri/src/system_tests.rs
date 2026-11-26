@@ -8,6 +8,29 @@ use crate::antigravity::install::Install;
 use crate::antigravity::{live, oauth_client, process};
 use crate::google::{USER_AGENT, cloudcode};
 
+#[test]
+#[ignore = "needs a signed-in local Antigravity 2.35.2 installation"]
+fn reads_antigravity_2352_personal_credential_layout() {
+    let install = Install::locate().expect("Antigravity installation");
+    assert_eq!(install.version().expect("installed version"), "2.35.2");
+    let bundle = live::read()
+        .expect("read local sign-in")
+        .expect("signed in");
+    assert_eq!(bundle.auth_method.as_deref(), Some("consumer"));
+    assert!(
+        bundle
+            .id_token_email
+            .is_some_and(|email| !email.trim().is_empty()),
+        "native credential has no account email"
+    );
+    assert!(!bundle.token.access_token.is_empty(), "empty access token");
+    assert!(
+        !bundle.token.refresh_token.is_empty(),
+        "empty refresh token"
+    );
+    println!("Antigravity 2.35.2 local installation and consumer credential layout verified");
+}
+
 #[tokio::test]
 #[ignore = "needs a local Antigravity installation"]
 async fn reads_installation_sign_in_and_quota() {

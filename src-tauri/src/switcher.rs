@@ -8,7 +8,7 @@
 
 use std::sync::Arc;
 
-use crate::antigravity::credential::{Bundle, CONSUMER_AUTH_METHOD};
+use crate::antigravity::credential::Bundle;
 use crate::antigravity::{live, process};
 use crate::error::{Error, Result};
 use crate::google::oauth;
@@ -50,29 +50,23 @@ pub async fn switch(orbit: &Arc<Orbit>, target_id: &str) -> Result<()> {
         return Err(Error::VerifyFailed);
     }
 
-    let previous = live::read()?;
-    save_back(orbit, previous.as_ref()).await?;
-    let auth_method = previous
-        .as_ref()
-        .and_then(|bundle| bundle.auth_method.clone())
-        .unwrap_or_else(|| CONSUMER_AUTH_METHOD.to_owned());
-    let bundle = Bundle::from_grant(&grant, &refresh_token, &auth_method);
+    let bundle = Bundle::from_grant(&grant, &refresh_token, &target)?;
+    if bundle
+        .claims()
+        .is_some_and(|claims| claims.sub != target_id)
+    {
+        return Err(Error::VerifyFailed);
+    }
+    save_back(orbit, live::read()?.as_ref()).await?;
 
     orbit.set_operation(step(SwitchStep::Closing));
     process::stop_all(Some(&install)).await?;
 
     orbit.set_operation(step(SwitchStep::Writing));
-    if let Err(err) = write_and_verify(&bundle, target_id) {
-        log::error!("switch failed while writing, restoring the previous sign-in: {err}");
-        let restored = match &previous {
-            Some(previous) => live::write(previous),
-            None => live::clear(),
-        };
-        if let Err(restore_err) = restored {
-            log::error!("restoring the previous sign-in failed: {restore_err}");
-            return Err(Error::RollbackFailed);
+    if let Err(err) = live::replace(&bundle) {
+        if !matches!(err, Error::RollbackFailed) {
+            let _ = process::launch(&install).await;
         }
-        let _ = process::launch(&install).await;
         return Err(err);
     }
     orbit
@@ -112,21 +106,6 @@ async fn save_back(orbit: &Orbit, previous: Option<&Bundle>) -> Result<()> {
         return Ok(());
     }
     vault::set(&profile.id, &bundle.token.refresh_token)
-}
-
-fn write_and_verify(bundle: &Bundle, target_id: &str) -> Result<()> {
-    live::write(bundle)?;
-    let written = live::read()?.ok_or(Error::VerifyFailed)?;
-    let matches = written.token.refresh_token == bundle.token.refresh_token
-        && written.token.access_token == bundle.token.access_token
-        && written
-            .claims()
-            .is_none_or(|claims| claims.sub == target_id);
-    if matches {
-        Ok(())
-    } else {
-        Err(Error::VerifyFailed)
-    }
 }
 
 pub async fn stop(orbit: &Arc<Orbit>) -> Result<()> {

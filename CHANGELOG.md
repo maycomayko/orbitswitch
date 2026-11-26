@@ -6,6 +6,13 @@ All notable changes to OrbitSwitch are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- Write the verified target account email into Antigravity's personal sign-in record in the format
+  used by Desktop 2.35.2.
+- Verify the Keychain and fallback credential separately. If a switch fails, restore each location
+  to its own previous state, including when the fallback file did not exist.
+
 ## [0.3.1] - 2026-11-24
 
 ### Removed

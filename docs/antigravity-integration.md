@@ -6,10 +6,10 @@ internals live in [architecture.md](architecture.md); read-only verification com
 
 | Contract | Verified on | Owner module |
 |---|---|---|
-| Signed-in credential storage | 2.19.1–2.26.0 and 2.32.2, macOS 27 | `antigravity/live.rs` |
-| Credential bundle format | 2.19.1–2.26.0 and 2.32.2, macOS 27 | `antigravity/credential.rs` |
+| Signed-in credential storage | 2.19.1–2.26.0, 2.32.2 and read-only on 2.35.2, macOS 27 | `antigravity/live.rs` |
+| Credential bundle format | 2.19.1–2.26.0, 2.32.2 and read-only on 2.35.2, macOS 27 | `antigravity/credential.rs` |
 | OAuth client and scopes | 2.19.1–2.26.0, macOS 27 | `antigravity/oauth_client.rs`, `google/oauth.rs` |
-| Installed version in `app.asar` | 2.23.1–2.26.0, 2.32.2 and 2.34.0, macOS 27 | `antigravity/version.rs` |
+| Installed version in `app.asar` | 2.23.1–2.26.0, 2.32.2, 2.34.0 and 2.35.2, macOS 27 | `antigravity/version.rs` |
 | Quota and plan endpoints | 2.19.1–2.26.0, 2.32.2 and 2.34.0, macOS 27 | `google/cloudcode.rs` |
 | Processes holding the credential | 2.19.1–2.26.0, macOS 27 | `antigravity/process.rs` |
 | Windows equivalents | **not verified** | same modules |
@@ -24,8 +24,9 @@ Antigravity's Go language server stores the active credential with
 - **Windows** (**not verified**): generic credential with target `gemini:antigravity` containing raw
   UTF-8 JSON.
 
-It also mirrors the raw JSON to `~/.gemini/jetski-standalone-oauth-token` (mode `0600`) as a timeout
-fallback. OrbitSwitch reads the keyring first and writes both locations on switch.
+The timeout fallback is raw JSON in `~/.gemini/jetski-standalone-oauth-token` (mode `0600`). It may
+be absent when the Keychain works. OrbitSwitch reads the keyring first. On a switch it writes and
+verifies both locations, restoring each previous value or absence if verification fails.
 
 ## Credential bundle
 
@@ -38,12 +39,14 @@ fallback. OrbitSwitch reads the keyring first and writes both locations on switc
     "expiry": "2026-10-03T17:52:30.076579+08:00"
   },
   "auth_method": "consumer",
-  "id_token": "…"
+  "id_token_email": "person@example.invalid"
 }
 ```
 
 - `token` matches `golang.org/x/oauth2.Token`; `expiry` uses RFC 3339 with the local offset.
 - `auth_method` is `consumer` for personal Google accounts.
+- Desktop 2.35.2 stores `id_token_email` for the signed-in personal account. OrbitSwitch populates
+  it from the verified destination profile before closing the app.
 - `id_token` is optional. OrbitSwitch resolves the account ID and profile from Google UserInfo
   using the bundle's access token, with usable ID-token claims as a fallback. Unknown fields are
   preserved on round-trip.
