@@ -6,6 +6,12 @@ All notable changes to OrbitSwitch are documented here. The format follows
 
 ## [Unreleased]
 
+### Removed
+
+- Keep only the Antigravity account manager, including manual switching, login and native quota
+  display. Remove the other client integrations and the upstream application updater. Existing
+  Antigravity sign-ins remain available, and unrelated records in earlier app storage are retained.
+
 ### Fixed
 
 - Write the verified target account email into Antigravity's personal sign-in record in the format

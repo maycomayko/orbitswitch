@@ -13,14 +13,12 @@ use crate::antigravity::{live, process};
 use crate::error::{Error, Result};
 use crate::google::oauth;
 use crate::model::{Operation, QuotaState, SwitchStep};
-use crate::provider::Provider;
 use crate::registry;
 use crate::state::Orbit;
 use crate::{quota, vault};
 
 pub async fn switch(orbit: &Arc<Orbit>, target_id: &str) -> Result<()> {
     let step = |step| Operation::Switching {
-        provider: Provider::Antigravity,
         target_id: target_id.to_owned(),
         step,
     };
@@ -109,9 +107,7 @@ async fn save_back(orbit: &Orbit, previous: Option<&Bundle>) -> Result<()> {
 }
 
 pub async fn stop(orbit: &Arc<Orbit>) -> Result<()> {
-    let _guard = orbit.begin(Operation::Stopping {
-        provider: Provider::Antigravity,
-    })?;
+    let _guard = orbit.begin(Operation::Stopping)?;
     let install = orbit.install().ok();
     let result = process::stop_all(install.as_ref()).await;
     orbit.refresh_status();
@@ -119,9 +115,7 @@ pub async fn stop(orbit: &Arc<Orbit>) -> Result<()> {
 }
 
 pub async fn restart(orbit: &Arc<Orbit>) -> Result<()> {
-    let _guard = orbit.begin(Operation::Restarting {
-        provider: Provider::Antigravity,
-    })?;
+    let _guard = orbit.begin(Operation::Restarting)?;
     let install = orbit.install()?;
     process::stop_all(Some(&install)).await?;
     let result = process::launch(&install).await;

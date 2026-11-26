@@ -1,4 +1,4 @@
-import { clock, percent, untilReset } from "../format";
+import { clock, percent, quotaLabel, untilReset } from "../format";
 import { t } from "../i18n";
 import { severity } from "../quota";
 import type { QuotaGroup, QuotaWindow } from "../types";
@@ -37,7 +37,7 @@ export function QuotaRow({ group }: { group: QuotaGroup }) {
       className="quota-row"
       title={group.models.length ? t("quota.models", { list: group.models.join(", ") }) : undefined}
     >
-      <span className="quota-group">{group.label}</span>
+      <span className="quota-group">{quotaLabel(group)}</span>
       <div className="quota-windows">
         {group.fiveHour && <Meter label={t("quota.fiveHour")} window={group.fiveHour} />}
         {group.weekly && <Meter label={t("quota.weekly")} window={group.weekly} />}

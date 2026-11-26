@@ -12,8 +12,7 @@ import { t } from "./i18n";
 import { ipc } from "./ipc";
 import type { Account } from "./types";
 
-const REPOSITORY = "https://github.com/shengyy/orbitswitch";
-const WEBSITE = "https://shengyy.github.io/orbitswitch/";
+const REPOSITORY = "https://github.com/maycomayko/orbitswitch/tree/antigravity-2.35.2";
 
 type Entry = "separator" | { text: string; action?: () => void; enabled?: boolean; checked?: boolean };
 
@@ -44,21 +43,12 @@ async function popup(entries: Entry[], at: LogicalPosition) {
   await menu.popup(at);
 }
 
-export async function showAppMenu(
-  event: MouseEvent,
-  version: string,
-  update: { checking: boolean; enabled: boolean; onCheck: () => void },
-) {
+export async function showAppMenu(event: MouseEvent, version: string) {
   const at = anchor(event);
   const launchAtLogin = await ipc.autostartEnabled().catch(() => false);
   await popup(
     [
       { text: `OrbitSwitch ${version}`, enabled: false },
-      {
-        text: t(update.checking ? "update.checking" : "menu.checkUpdate"),
-        enabled: update.enabled && !update.checking,
-        action: update.onCheck,
-      },
       "separator",
       {
         text: t("menu.launchAtLogin"),
@@ -67,7 +57,6 @@ export async function showAppMenu(
       },
       { text: t("menu.logs"), action: () => void ipc.revealLogs() },
       "separator",
-      { text: t("menu.website"), action: () => void openUrl(WEBSITE) },
       { text: t("menu.github"), action: () => void openUrl(REPOSITORY) },
       "separator",
       { text: t("menu.quit"), action: () => void ipc.quit() },

@@ -2,11 +2,9 @@ import { describe, expect, test } from "bun:test";
 import { available, bestAccountId } from "../src/quota";
 import type { Account } from "../src/types";
 
-function account(id: string, remaining: number, provider: Account["provider"] = "codex"): Account {
+function account(id: string, remaining: number): Account {
   return {
     id,
-    provider,
-    desktopReady: true,
     email: `${id}@example.com`,
     name: null,
     picture: null,
@@ -17,7 +15,7 @@ function account(id: string, remaining: number, provider: Account["provider"] = 
       stale: false,
       groups: [
         {
-          key: provider === "codex" ? "codex" : "claude",
+          key: "claude",
           label: "Coding",
           models: [],
           fiveHour: { remaining, resetAt: null, label: "5h", durationMinutes: 300 },
@@ -73,9 +71,6 @@ describe("account recommendations", () => {
     active.quota = { status: "failed", code: "network", message: "fixture" };
     expect(bestAccountId([active, account("other", 1)], "active")).toBeNull();
   });
-  test("never compares different providers", () => {
-    expect(bestAccountId([account("active", 0), account("other", 1, "claude")], "active")).toBeNull();
-  });
   test("different window durations are not comparable", () => {
     const other = account("other", 1);
     if (other.quota.status === "ready" && other.quota.groups[0].fiveHour)
@@ -83,9 +78,9 @@ describe("account recommendations", () => {
     expect(bestAccountId([account("active", 0), other], "active")).toBeNull();
   });
   test("Gemini-only recommendations compare accounts with the same reported pools", () => {
-    const active = account("active", 0.1, "antigravity");
-    const other = account("other", 0.8, "antigravity");
-    const withClaude = account("with-claude", 1, "antigravity");
+    const active = account("active", 0.1);
+    const other = account("other", 0.8);
+    const withClaude = account("with-claude", 1);
     if (
       active.quota.status === "ready" &&
       other.quota.status === "ready" &&

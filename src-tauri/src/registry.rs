@@ -95,8 +95,15 @@ impl Registry {
         &self.file.accounts
     }
 
+    pub fn antigravity_accounts(&self) -> impl Iterator<Item = &Account> {
+        self.file
+            .accounts
+            .iter()
+            .filter(|a| a.provider == Provider::Antigravity)
+    }
+
     pub fn get(&self, id: &str) -> Option<&Account> {
-        self.file.accounts.iter().find(|a| a.id == id)
+        self.antigravity_accounts().find(|a| a.id == id)
     }
 
     /// Inserts a new account or refreshes an existing one in place, keeping
@@ -106,7 +113,12 @@ impl Registry {
         if let Some(ignored) = self.file.ignored_native.get_mut(&account.provider) {
             ignored.remove(&account.id);
         }
-        match self.file.accounts.iter_mut().find(|a| a.id == account.id) {
+        match self
+            .file
+            .accounts
+            .iter_mut()
+            .find(|a| a.id == account.id && a.provider == account.provider)
+        {
             Some(existing) => {
                 existing.email = account.email;
                 existing.desktop_ready = account.desktop_ready;
@@ -124,7 +136,12 @@ impl Registry {
     }
 
     pub fn set_plan(&mut self, id: &str, plan: Plan) -> Result<()> {
-        match self.file.accounts.iter_mut().find(|a| a.id == id) {
+        match self
+            .file
+            .accounts
+            .iter_mut()
+            .find(|a| a.id == id && a.provider == Provider::Antigravity)
+        {
             Some(account) if account.plan.as_ref() != Some(&plan) => {
                 account.plan = Some(plan);
                 self.save()
@@ -134,7 +151,9 @@ impl Registry {
     }
 
     pub fn remove(&mut self, id: &str) -> Result<()> {
-        self.file.accounts.retain(|a| a.id != id);
+        self.file
+            .accounts
+            .retain(|a| a.id != id || a.provider != Provider::Antigravity);
         self.save()
     }
 
@@ -151,13 +170,15 @@ impl Registry {
             .inspect_err(|_| self.file.live_fingerprint = previous)
     }
 
-    pub fn ignores_native(&self, provider: Provider, id: &str) -> bool {
+    #[cfg(test)]
+    fn ignores_native(&self, provider: Provider, id: &str) -> bool {
         self.file
             .ignored_native
             .get(&provider)
             .is_some_and(|values| values.contains(id))
     }
-    pub fn ignore_native(&mut self, provider: Provider, id: &str) -> Result<()> {
+    #[cfg(test)]
+    fn ignore_native(&mut self, provider: Provider, id: &str) -> Result<()> {
         let previous = self.file.ignored_native.clone();
         self.file
             .ignored_native
@@ -170,13 +191,15 @@ impl Registry {
         }
         Ok(())
     }
-    pub fn native_fingerprint(&self, provider: Provider) -> Option<&str> {
+    #[cfg(test)]
+    fn native_fingerprint(&self, provider: Provider) -> Option<&str> {
         self.file
             .native_fingerprints
             .get(&provider)
             .map(String::as_str)
     }
-    pub fn set_native_fingerprint(&mut self, provider: Provider, value: String) -> Result<()> {
+    #[cfg(test)]
+    fn set_native_fingerprint(&mut self, provider: Provider, value: String) -> Result<()> {
         let previous = self.file.native_fingerprints.clone();
         self.file.native_fingerprints.insert(provider, value);
         if let Err(error) = self.save() {
@@ -234,6 +257,27 @@ mod tests {
             plan: None,
             added_at: Utc::now(),
         }
+    }
+
+    #[test]
+    fn only_antigravity_accounts_are_active_and_legacy_entries_survive_edits() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut registry = Registry::load(dir.path()).unwrap();
+        let google = account("google-user", None);
+        let mut legacy = account("legacy-user", None);
+        legacy.provider = Provider::Codex;
+        registry.upsert(legacy.clone()).unwrap();
+        registry.upsert(google).unwrap();
+
+        assert_eq!(registry.antigravity_accounts().count(), 1);
+        assert!(registry.get("legacy-user").is_none());
+        registry.remove("google-user").unwrap();
+
+        let saved = Registry::load(dir.path()).unwrap();
+        assert_eq!(saved.antigravity_accounts().count(), 0);
+        assert_eq!(saved.accounts().len(), 1);
+        assert_eq!(saved.accounts()[0].provider, legacy.provider);
+        assert_eq!(saved.accounts()[0].id, legacy.id);
     }
 
     #[test]

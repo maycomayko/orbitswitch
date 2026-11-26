@@ -1,5 +1,5 @@
 import type { MouseEvent } from "react";
-import { ago, displayName, untilReset } from "../format";
+import { ago, displayName, quotaLabel, untilReset } from "../format";
 import { errorText, t } from "../i18n";
 import type { Account, QuotaGroup } from "../types";
 import { Avatar } from "./avatar";
@@ -13,14 +13,13 @@ interface Props {
   active: boolean;
   best: boolean;
   disabled: boolean;
-  needsDesktop: boolean;
-  onBind: () => void;
+
   onSwitch: () => void;
   onReauth: () => void;
   onMenu: (event: MouseEvent) => void;
 }
 
-/** The tightest low window that will recover, e.g. "Claude 5h · resets in 2h 14m". */
+/** The tightest low window with a known reset time. */
 function recoveryHint(groups: QuotaGroup[]): string | null {
   const candidates = groups.flatMap((group) =>
     [
@@ -31,7 +30,7 @@ function recoveryHint(groups: QuotaGroup[]): string | null {
   candidates.sort((a, b) => (a.window?.remaining ?? 1) - (b.window?.remaining ?? 1));
   for (const { group, label, window } of candidates) {
     const time = untilReset(window?.resetAt ?? null);
-    if (time) return `${group.label} ${label} · ${t("quota.resetsIn", { time })}`;
+    if (time) return `${quotaLabel(group)} ${label} · ${t("quota.resetsIn", { time })}`;
   }
   return null;
 }
@@ -87,14 +86,13 @@ export function AccountCard({
   active,
   best,
   disabled,
-  needsDesktop,
-  onBind,
+
   onSwitch,
   onReauth,
   onMenu,
 }: Props) {
   const name = displayName(account.name, account.email);
-  const canSwitch = !active && !disabled && !needsDesktop && account.quota.status !== "reauth";
+  const canSwitch = !active && !disabled && account.quota.status !== "reauth";
   const classes = ["card", active && "card-active", canSwitch && "card-switchable"].filter(Boolean).join(" ");
   return (
     // biome-ignore lint/a11y/useKeyWithClickEvents: the account identity button is the keyboard path.
@@ -147,22 +145,6 @@ export function AccountCard({
         </button>
       </header>
       <QuotaBody account={account} onReauth={onReauth} />
-      {needsDesktop && (
-        <div className="card-binding">
-          {t("bind.needed")}
-          <button
-            type="button"
-            className="link-btn"
-            disabled={disabled}
-            onClick={(event) => {
-              event.stopPropagation();
-              onBind();
-            }}
-          >
-            {t("bind.action")}
-          </button>
-        </div>
-      )}
     </article>
   );
 }

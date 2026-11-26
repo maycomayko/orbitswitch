@@ -4,8 +4,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::provider::Provider;
-
 pub const SNAPSHOT_EVENT: &str = "orbitswitch://snapshot";
 
 #[derive(Debug, Clone, Serialize)]
@@ -14,32 +12,15 @@ pub struct Snapshot {
     pub platform: &'static str,
     pub version: &'static str,
     pub accounts: Vec<AccountView>,
-    /// The verified current sign-in and detected client status for each provider.
-    pub providers: Vec<ProviderStatus>,
+    pub client: ClientStatus,
     pub operation: Operation,
     pub refreshing: bool,
     pub refreshed_at: Option<DateTime<Utc>>,
-    pub update: UpdateStatus,
-}
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct UpdateStatus {
-    pub checking: bool,
-    pub available: Option<UpdateInfo>,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct UpdateInfo {
-    pub version: String,
-    pub notes: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AccountView {
-    pub provider: Provider,
-    pub desktop_ready: bool,
     pub id: String,
     pub email: String,
     pub name: Option<String>,
@@ -68,11 +49,8 @@ pub enum QuotaState {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ProviderStatus {
-    pub provider: Provider,
+pub struct ClientStatus {
     pub active_id: Option<String>,
-    pub desktop_installed: bool,
-    pub aligned: bool,
     pub installed: bool,
     pub running: bool,
 }
@@ -83,42 +61,15 @@ pub enum Operation {
     Idle,
     #[serde(rename_all = "camelCase")]
     Adding {
-        provider: Provider,
         can_copy_link: bool,
     },
-    Importing {
-        provider: Provider,
-    },
-    Removing {
-        provider: Provider,
-    },
+    Removing,
     #[serde(rename_all = "camelCase")]
     Switching {
-        provider: Provider,
         target_id: String,
         step: SwitchStep,
     },
-    Stopping {
-        provider: Provider,
-    },
-    Restarting {
-        provider: Provider,
-    },
-    Updating {
-        step: UpdateStep,
-        downloaded: u64,
-        total: Option<u64>,
-    },
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub enum UpdateStep {
-    Downloading,
-    Verifying,
-    Installing,
-    // Windows exits and relaunches through the NSIS installer.
-    #[cfg(not(target_os = "windows"))]
+    Stopping,
     Restarting,
 }
 
@@ -137,10 +88,6 @@ pub enum GroupKey {
     Gemini,
     Claude,
     Other,
-    Codex,
-    Review,
-    Sonnet,
-    Opus,
 }
 
 #[derive(Debug, Clone, Serialize)]

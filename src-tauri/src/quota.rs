@@ -27,8 +27,7 @@ pub async fn refresh_all(orbit: &Arc<Orbit>) {
         state.refreshing = true;
         state
             .registry
-            .accounts()
-            .iter()
+            .antigravity_accounts()
             .map(|a| a.id.clone())
             .collect::<Vec<_>>()
     };
@@ -62,11 +61,6 @@ struct Refresh {
 }
 
 pub async fn refresh_one(orbit: &Arc<Orbit>, account_id: &str) {
-    let provider = orbit.state().registry.get(account_id).map(|a| a.provider);
-    if let Some(provider) = provider.filter(|p| *p != crate::provider::Provider::Antigravity) {
-        crate::native::refresh(orbit, provider, account_id).await;
-        return;
-    }
     let result = async {
         let token = orbit.access_token(account_id).await?;
         let cloudcode = cloudcode::Client::new(&orbit.http, &orbit.install()?)?;
@@ -151,15 +145,11 @@ mod tests {
                 registry,
                 quotas: Default::default(),
                 active_id: None,
-                native_active: Default::default(),
-                native_aligned: Default::default(),
-                native_clients: Default::default(),
                 operation: Operation::Idle,
                 refreshing: false,
                 refreshed_at: None,
                 install: None,
                 running: false,
-                update: Default::default(),
             },
         )
     }

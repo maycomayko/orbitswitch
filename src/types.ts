@@ -1,7 +1,6 @@
 // Mirrors src-tauri/src/model.rs. The backend is the source of truth.
 
-export type Provider = "antigravity" | "codex" | "claude";
-export type GroupKey = "gemini" | "claude" | "codex" | "review" | "sonnet" | "opus" | "other";
+export type GroupKey = "gemini" | "claude" | "other";
 export type PlanKind =
   | "free"
   | "pro"
@@ -42,8 +41,6 @@ export type QuotaState =
   | { status: "reauth" };
 
 export interface Account {
-  provider: Provider;
-  desktopReady: boolean;
   id: string;
   email: string;
   name: string | null;
@@ -56,33 +53,20 @@ export type SwitchStep = "preparing" | "closing" | "writing" | "launching";
 
 export type Operation =
   | { kind: "idle" }
-  | { kind: "adding"; provider: Provider; canCopyLink: boolean }
-  | { kind: "importing"; provider: Provider }
-  | { kind: "removing"; provider: Provider }
-  | { kind: "switching"; provider: Provider; targetId: string; step: SwitchStep }
-  | { kind: "stopping"; provider: Provider }
-  | { kind: "restarting"; provider: Provider }
-  | {
-      kind: "updating";
-      step: "downloading" | "verifying" | "installing" | "restarting";
-      downloaded: number;
-      total: number | null;
-    };
-
-export interface UpdateInfo {
-  version: string;
-  notes: string | null;
-}
+  | { kind: "adding"; canCopyLink: boolean }
+  | { kind: "removing" }
+  | { kind: "switching"; targetId: string; step: SwitchStep }
+  | { kind: "stopping" }
+  | { kind: "restarting" };
 
 export interface Snapshot {
   platform: "macos" | "windows" | "linux";
   version: string;
   accounts: Account[];
   operation: Operation;
-  providers: ProviderStatus[];
+  client: ClientStatus;
   refreshing: boolean;
   refreshedAt: string | null;
-  update: { checking: boolean; available: UpdateInfo | null };
 }
 
 export type ProcessKind = "app" | "helper" | "languageServer" | "cli";
@@ -98,11 +82,8 @@ export interface BackendError {
   message: string;
 }
 
-export interface ProviderStatus {
-  provider: Provider;
+export interface ClientStatus {
   activeId: string | null;
   installed: boolean;
-  desktopInstalled: boolean;
-  aligned: boolean;
   running: boolean;
 }

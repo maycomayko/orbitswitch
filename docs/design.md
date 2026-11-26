@@ -1,7 +1,7 @@
 # Design
 
-Visual presentation, interaction, icons and screenshots for the app and website. Product rules live in
-[PRODUCT.md](../PRODUCT.md); build, signing and publishing live in [release.md](release.md).
+Visual presentation, interaction, icons and screenshots for the app. Product rules live in
+[PRODUCT.md](../PRODUCT.md); build and signing live in [release.md](release.md).
 
 ## Surfaces
 
@@ -14,13 +14,11 @@ Visual presentation, interaction, icons and screenshots for the app and website.
 
 ## Interaction
 
-- The Gemini / ChatGPT / Claude tab bar switches views; Arrow keys, Home and End navigate between
-  tabs.
-- Confirmations, progress and update details slide up as in-surface sheets (`Enter` confirms,
+- Confirmations and progress slide up as in-surface sheets (`Enter` confirms,
   `Escape` cancels). Confirmations list the affected processes.
 - Long-running operations show backend step progress; success closes after 1.6 s and errors remain
   until dismissed.
-- Browser sign-in shows a cancellable waiting sheet until authentication completes. Gemini also
+- Browser sign-in shows a cancellable waiting sheet until authentication completes. The sheet also
   offers **Copy sign-in link** for a private window or another browser on the same computer, with
   a disabled action during preparation and inline copy success/failure feedback.
 - Account actions (`Sign In Again…`, `Copy Email`, `Remove Account…`) open in a native context menu
@@ -55,17 +53,11 @@ rsvg-convert -h 36 assets/brand/tray-template.svg -o src-tauri/icons/tray-templa
 
 ## Screenshots
 
-Render README and website screenshots from the real UI with fictional accounts:
+Render README screenshots from the real UI with fictional accounts:
 
 ```bash
 bun scripts/screenshot/render.ts   # requires Google Chrome and ImageMagick
 ```
 
-Writes `assets/screenshots/{hero,flow,codex,claude,adding}-{light,dark}@3x.png` and 2x copies without the
+Writes `assets/screenshots/{hero,flow,adding}-{light,dark}@3x.png` and 2x copies without the
 suffix using `scripts/screenshot/mock-tauri.js` and `frame.css`.
-
-## Website
-
-`site/index.html`, `site/style.css`, `site/demo.css`, `site/demo.js` and `site/download.js` implement
-the bilingual landing page, interactive fictional `@example.com` demo and GitHub Releases installer
-resolver. Local preview and deployment live in [release.md](release.md#website).

@@ -24,7 +24,6 @@ const SIGN_IN_TIMEOUT: Duration = Duration::from_secs(5 * 60);
 /// that is already listed renews its authorization. Returns the account id.
 pub async fn add(orbit: &Arc<Orbit>) -> Result<String> {
     let guard = orbit.begin(Operation::Adding {
-        provider: Provider::Antigravity,
         can_copy_link: false,
     })?;
     let sync = orbit.sync_lock.lock().await;
@@ -84,9 +83,10 @@ pub fn copy_sign_in_link(orbit: &Orbit) -> Result<()> {
 
 /// Forgets the account. Antigravity stays signed in if it was the active one.
 pub async fn remove(orbit: &Arc<Orbit>, account_id: &str) -> Result<()> {
-    let _guard = orbit.begin(Operation::Removing {
-        provider: Provider::Antigravity,
-    })?;
+    let _guard = orbit.begin(Operation::Removing)?;
+    if orbit.state().registry.get(account_id).is_none() {
+        return Err(Error::AccountNotFound);
+    }
     let _sync = orbit.sync_lock.lock().await;
     vault::delete(account_id)?;
     orbit.tokens.forget(account_id);

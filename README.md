@@ -1,68 +1,24 @@
-<p align="center"><img src="assets/brand/app-icon.svg" width="104" alt="OrbitSwitch icon"></p>
-<h1 align="center">OrbitSwitch</h1>
-<p align="center">Switch accounts. See quota. Stay in flow.</p>
-<p align="center"><a href="README.zh-CN.md">简体中文</a> · <a href="https://shengyy.github.io/orbitswitch/">Website</a> · <a href="https://github.com/shengyy/orbitswitch/releases">Releases</a></p>
+# OrbitSwitch for Antigravity
 
-A compact menu bar and system tray utility for **your own** Antigravity, Codex and Claude accounts.
-Three tabs, one view of subscriptions, remaining quota and reset times.
+[简体中文](README.zh-CN.md) · [Compatibility and verification](docs/status.md)
 
-<picture><source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/hero-dark.png"><img src="assets/screenshots/hero-light.png" width="640" alt="OrbitSwitch's three platform tabs and fictional subscription accounts"></picture>
+A menu bar and tray utility for switching between your own Antigravity subscriptions. See the
+current account, remaining quota, and reset times. The app manages Antigravity Desktop and
+its related `agy` CLI processes.
 
-| Tab | Account switching | Subscription quota |
-|---|---|---|
-| Gemini | Antigravity desktop + `agy` CLI | Google model groups |
-| ChatGPT | Codex desktop + CLI | Codex windows and additional pools |
-| Claude | Claude Desktop + Claude Code, after linking their sign-ins | Claude shared and model-specific windows |
+<picture><source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/hero-dark.png"><img src="assets/screenshots/hero-light.png" width="640" alt="Antigravity account list in OrbitSwitch"></picture>
 
-Changing tabs only changes the view. A switch asks before closing clients, verifies the new sign-in,
-restores credentials on failure, and reopens the installed desktop app. Reopen CLI sessions yourself.
-A failed refresh keeps the previous numbers with a stale label. Missing windows are never guessed.
-These are the coding clients' quotas, not Gemini or ChatGPT web-chat allowances.
+## Use
 
-Antigravity switching, Codex and Claude identity/quota reads, and Claude Desktop binding are verified
-on macOS; real Codex/Claude switching, browser enrollment and native Windows behavior remain
-**not verified**. See [docs/status.md](docs/status.md).
+1. Launch OrbitSwitch from the menu bar or system tray. It detects the native Antigravity sign-in.
+2. Use **Add account** to authorize the second Google account in your browser.
+3. Select an account and confirm to switch. OrbitSwitch verifies the target, closes the affected
+   processes, writes and checks the new credentials, then reopens Antigravity Desktop.
 
-## Install and use
+Quotas come from your Antigravity plan. Shared model pools reported by Antigravity can include
+Claude and GPT models. OrbitSwitch never contacts those standalone services.
 
-macOS 26+ or Windows 10/11 x64. Install the official clients you want to manage; adding a Codex or
-Claude account requires its official CLI. Download from
-[Releases](https://github.com/shengyy/orbitswitch/releases).
+Saved Antigravity accounts from earlier builds are preserved. Install a newer fork build manually
+to upgrade. See [build instructions](docs/release.md) and [credential storage](SECURITY.md).
 
-macOS builds are ad-hoc signed without Apple notarization. If Gatekeeper blocks first launch, choose
-**Open** from the context menu or run `xattr -dr com.apple.quarantine /Applications/OrbitSwitch.app`.
-Windows builds are unsigned; SmartScreen may require **More info → Run anyway**.
-
-1. Open OrbitSwitch from the menu bar or tray and choose a platform tab.
-2. **Add account** opens the official sign-in without changing your current client account.
-   **Import** saves the account already signed in on this computer.
-   For Gemini in a private window or another browser, choose **Copy sign-in link** in OrbitSwitch's
-   waiting sheet and open it on the same computer. Complete sign-in within five minutes.
-3. For Claude Desktop, sign into the same account and workspace in both Desktop and Claude Code,
-   then import.
-4. Pick another account, review the affected processes, and confirm the switch.
-
-Codex keeps native local projects and their chat memberships across saved accounts. If a previous
-switch hid them, choose **Restart** in the ChatGPT tab to recover them. Local project order and
-individual expansion choices follow the outgoing workspace; every switch or **Restart** expands
-the project section and full list. Destination project metadata and memberships take precedence;
-cloud-backed projects and remote memberships remain separate.
-Local-project recovery after an authorized Codex restart is verified on macOS. Account-to-account
-switching and the sidebar expansion repair remain **not verified** end to end; see
-[docs/status.md](docs/status.md).
-
-The app menu offers Open at Login, logs, update checks and Quit. Updates restart OrbitSwitch only.
-
-Upgrading from AgyOrbit or OrbitSwitch 0.2.1: close any older app instance and install 0.2.2 or later.
-Saved accounts and authorizations transfer automatically, including accounts added in 0.2.1. Keep
-the earlier account data and credential-store entries until the first successful launch.
-
-## Local by design
-
-Credentials and paired desktop sessions stay in the Rust backend and the OS credential store. The
-frontend receives account metadata and quota snapshots only. OrbitSwitch contacts official
-authentication/usage endpoints and GitHub Releases for updates; there is no account server, model
-proxy, automatic rotation or telemetry. See [SECURITY.md](SECURITY.md), [PRODUCT.md](PRODUCT.md) and
-[CONTRIBUTING.md](CONTRIBUTING.md).
-
-MIT. Independent of Google, OpenAI and Anthropic; product names belong to their respective owners.
+MIT. Based on [upstream OrbitSwitch](https://github.com/shengyy/orbitswitch). Unaffiliated with Google.

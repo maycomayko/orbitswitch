@@ -1,14 +1,14 @@
 import type { MouseEvent } from "react";
+import { antigravity } from "../client";
 import { ago } from "../format";
 import { t } from "../i18n";
-import { providerInfo } from "../providers";
-import type { ProviderStatus, Snapshot } from "../types";
+import type { ClientStatus, Snapshot } from "../types";
 import { MoreIcon, OrbitMark, RefreshIcon } from "./icons";
 import "./header.css";
 
 interface Props {
   snapshot: Snapshot;
-  status: ProviderStatus;
+  status: ClientStatus;
   onRefresh: () => void;
   onMore: (event: MouseEvent) => void;
 }
@@ -29,7 +29,7 @@ export function Header({ snapshot, status: clientStatus, onRefresh, onMore }: Pr
         <div className="brand-status">
           <span className={`status-dot status-${status}`} />
           <span className="truncate">
-            {t(`status.${status}`, { client: providerInfo[clientStatus.provider].client })}
+            {t(`status.${status}`, antigravity)}
             {updated && ` · ${updated}`}
           </span>
         </div>
