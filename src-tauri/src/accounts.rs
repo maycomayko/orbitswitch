@@ -12,7 +12,7 @@ use crate::antigravity::live;
 use crate::error::{Error, Result};
 use crate::google::loopback::Loopback;
 use crate::google::oauth::{self, Pkce, Profile};
-use crate::model::Operation;
+use crate::model::{Operation, QuotaState};
 use crate::provider::Provider;
 use crate::registry::{self, Account};
 use crate::state::Orbit;
@@ -58,13 +58,19 @@ pub async fn add(orbit: &Arc<Orbit>) -> Result<String> {
     orbit
         .tokens
         .put(&profile.id, grant.access_token, grant.expires_in);
-    orbit.update(|state| state.registry.upsert(account_from(&profile)))?;
+    orbit.update(|state| -> Result<()> {
+        state.registry.upsert(account_from(&profile))?;
+        if matches!(state.quotas.get(&profile.id), Some(QuotaState::Reauth)) {
+            state.quotas.remove(&profile.id);
+        }
+        Ok(())
+    })?;
     log::info!("account added");
 
-    drop(sync);
     drop(guard);
     shell::show(&orbit.app);
     quota::refresh_one(orbit, &profile.id).await;
+    drop(sync);
     Ok(profile.id)
 }
 
@@ -145,6 +151,9 @@ pub async fn sync_live(orbit: &Arc<Orbit>) -> Result<()> {
         orbit.tokens.forget(&profile.id);
         orbit.update(|state| -> Result<()> {
             state.registry.upsert(account_from(&profile))?;
+            if matches!(state.quotas.get(&profile.id), Some(QuotaState::Reauth)) {
+                state.quotas.remove(&profile.id);
+            }
             state.registry.set_live_fingerprint(fingerprint)
         })?;
         log::info!("adopted the account signed in to Antigravity");

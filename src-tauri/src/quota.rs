@@ -21,15 +21,19 @@ pub async fn refresh_all(orbit: &Arc<Orbit>) {
     }
     let ids = {
         let mut state = orbit.state();
-        if state.refreshing {
+        if !state.registry.usage_enabled() || state.refreshing {
             return;
         }
-        state.refreshing = true;
-        state
+        let ids = state
             .registry
             .antigravity_accounts()
             .map(|a| a.id.clone())
-            .collect::<Vec<_>>()
+            .collect::<Vec<_>>();
+        if ids.is_empty() {
+            return;
+        }
+        state.refreshing = true;
+        ids
     };
     orbit.emit();
     let mut tasks = JoinSet::new();
@@ -60,12 +64,18 @@ struct Refresh {
     plan: Result<Plan>,
 }
 
+/// Call with `sync_lock` held so a settings change cannot race these requests.
 pub async fn refresh_one(orbit: &Arc<Orbit>, account_id: &str) {
-    let saved_plan = orbit
-        .state()
-        .registry
-        .get(account_id)
-        .and_then(|account| account.plan.as_ref().map(|plan| plan.kind));
+    let saved_plan = {
+        let state = orbit.state();
+        if !state.registry.usage_enabled() {
+            return;
+        }
+        let Some(account) = state.registry.get(account_id) else {
+            return;
+        };
+        account.plan.as_ref().map(|plan| plan.kind)
+    };
     let result = async {
         let token = orbit.access_token(account_id).await?;
         let http = orbit.http()?;

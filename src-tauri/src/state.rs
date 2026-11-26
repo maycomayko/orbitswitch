@@ -102,6 +102,7 @@ impl Orbit {
 
     pub fn snapshot(&self) -> Snapshot {
         let state = self.state();
+        let usage_enabled = state.registry.usage_enabled();
         Snapshot {
             platform: std::env::consts::OS,
             version: env!("CARGO_PKG_VERSION"),
@@ -113,12 +114,17 @@ impl Orbit {
                     email: account.email.clone(),
                     name: account.name.clone(),
                     picture: account.picture.clone(),
-                    plan: account.plan.clone(),
-                    quota: state
-                        .quotas
-                        .get(&account.id)
-                        .cloned()
-                        .unwrap_or(QuotaState::Loading),
+                    plan: if usage_enabled {
+                        account.plan.clone()
+                    } else {
+                        None
+                    },
+                    quota: match state.quotas.get(&account.id) {
+                        Some(QuotaState::Reauth) => QuotaState::Reauth,
+                        _ if !usage_enabled => QuotaState::Disabled,
+                        Some(quota) => quota.clone(),
+                        None => QuotaState::Loading,
+                    },
                 })
                 .collect(),
             client: ClientStatus {
@@ -128,6 +134,7 @@ impl Orbit {
                 running: state.running,
             },
             network: self.network.lock().expect("network poisoned").status(),
+            usage_enabled,
             operation: state.operation.clone(),
             refreshing: state.refreshing,
             refreshed_at: state.refreshed_at,

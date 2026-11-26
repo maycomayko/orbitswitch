@@ -1,8 +1,14 @@
 .panel {
-  position: relative;
+  display: grid;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  background: var(--surface);
+}
+
+.panel-content {
+  grid-area: 1 / 1;
   display: flex;
   flex-direction: column;
-  background: var(--surface);
+  min-height: 0;
 }
 
 /* macOS: the window grows with the content, up to a menu-sized height. */
@@ -10,13 +16,19 @@
   max-height: 680px;
 }
 
-.platform-macos:has(.sheet-layer) {
-  min-height: 300px;
+.platform-macos > * {
+  max-height: inherit;
 }
 
 /* Windows: a normal window the panel fills. */
 .platform-windows {
   height: 100vh;
+}
+
+.accounts-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .account-list {

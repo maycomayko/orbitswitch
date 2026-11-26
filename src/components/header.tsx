@@ -14,7 +14,7 @@ interface Props {
 }
 
 export function Header({ snapshot, status: clientStatus, onRefresh, onMore }: Props) {
-  const { refreshing, refreshedAt } = snapshot;
+  const { refreshing, refreshedAt, usageEnabled } = snapshot;
   const status = !clientStatus.installed ? "missing" : clientStatus.running ? "running" : "stopped";
   const updated = refreshing
     ? t("header.refreshing")
@@ -30,20 +30,22 @@ export function Header({ snapshot, status: clientStatus, onRefresh, onMore }: Pr
           <span className={`status-dot status-${status}`} />
           <span className="truncate">
             {t(`status.${status}`, antigravity)}
-            {updated && ` · ${updated}`}
+            {usageEnabled && updated && ` · ${updated}`}
           </span>
         </div>
       </div>
-      <button
-        type="button"
-        className={`icon-btn${refreshing ? " spinning" : ""}`}
-        aria-label={t("header.refresh")}
-        title={t("header.refresh")}
-        disabled={refreshing}
-        onClick={onRefresh}
-      >
-        <RefreshIcon />
-      </button>
+      {usageEnabled && (
+        <button
+          type="button"
+          className={`icon-btn${refreshing ? " spinning" : ""}`}
+          aria-label={t("header.refresh")}
+          title={t("header.refresh")}
+          disabled={refreshing}
+          onClick={onRefresh}
+        >
+          <RefreshIcon />
+        </button>
+      )}
       <button
         type="button"
         className="icon-btn"

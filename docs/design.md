@@ -5,8 +5,8 @@ Visual presentation, interaction, icons and screenshots for the app. Product rul
 
 ## Surfaces
 
-- **macOS (26+)**: menu bar popover with no Dock icon, sized to content (up to 720 pt) and dismissed
-  on focus loss. The WebView is mounted inside the native Liquid Glass container via
+- **macOS (26+)**: menu bar popover with no Dock icon. It fits the account list or open sheet (up to
+  680 pt) and dismisses on focus loss. The WebView is mounted inside the native Liquid Glass container via
   `window-vibrancy`'s `content_view` API with 18 pt corner clipping and no extra system window shadow.
 - **Windows**: compact tray window that hides to the tray on close.
 - Both platforms share the React UI with `platform-macos` / `platform-windows` root classes. Left
@@ -23,12 +23,14 @@ Visual presentation, interaction, icons and screenshots for the app. Product rul
   a disabled action during preparation and inline copy success/failure feedback.
 - Account actions (`Sign In Again…`, `Copy Email`, `Remove Account…`) open in a native context menu
   on right click or `⋯`. App actions live in the header's `⋯` menu.
+- **Show plans and quota** is unchecked by default. Enabling it opens a risk confirmation with
+  **Cancel** initially focused. Selecting the checked item turns off future checks.
 
 ## Account card
 
-- Avatar (profile photo or initial), display name, plan badge (`PRO`, `ULTRA`, `PLUS`, `MAX`, team
-  tiers) and email.
-- `Current` marks the active account; `Most left` marks the recommended switch target.
+- Avatar (profile photo or initial), display name and email. The plan badge appears when plans
+  and quota are enabled.
+- `Current` marks the active account. When quota is enabled, `Most left` marks the recommended switch target.
 - Quota rows render each reported group and window meter with remaining percentage. Meters turn amber
   below 35 % and red below 10 %, with a low-quota recovery footnote and reset time on hover.
 - Hover or keyboard focus highlights switchable cards; clicking or activating the account identity

@@ -50,6 +50,13 @@ const en = {
   "menu.copyEmail": "Copy Email",
   "menu.remove": "Remove Account…",
   "menu.launchAtLogin": "Open at Login",
+  "menu.usage": "Show plans and quota",
+  "usage.title": "Show plans and quota?",
+  "usage.risk":
+    "OrbitSwitch uses internal Google Antigravity APIs to check your plans and quota. Google may flag or restrict accounts for this use.",
+  "usage.refresh":
+    "While OrbitSwitch is running, it checks periodically. You can turn this off from the ⋯ menu.",
+  "usage.enable": "Enable",
   "menu.logs": "Show Logs",
   "menu.github": "OrbitSwitch on GitHub",
   "menu.quit": "Quit OrbitSwitch",
@@ -174,6 +181,12 @@ const zh: Record<Key, string> = {
   "menu.copyEmail": "复制邮箱",
   "menu.remove": "移除账号…",
   "menu.launchAtLogin": "开机时启动",
+  "menu.usage": "显示套餐和额度",
+  "usage.title": "开启套餐和额度显示？",
+  "usage.risk":
+    "OrbitSwitch 会调用 Google Antigravity 的内部接口查询套餐和额度。Google 可能因此标记或限制账号。",
+  "usage.refresh": "OrbitSwitch 运行期间会定期查询。你可以随时在「⋯」菜单中关闭。",
+  "usage.enable": "开启",
   "menu.logs": "显示日志",
   "menu.github": "在 GitHub 上查看",
   "menu.quit": "退出 OrbitSwitch",

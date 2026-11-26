@@ -41,8 +41,9 @@ Update this page in the same PR whenever verification scope changes.
     and use installed plugins after switching. Antigravity showed an onboarding prompt in both
     directions, and clicking **Continue** returned to the workspace. Whether the prompt recurs
     on later switches remains **unverified**.
-  - The fork skips quota queries for confirmed Free accounts while continuing to refresh their
-    plans. Network settings can use system networking or an optional local HTTP proxy.
+  - With plan and quota display enabled, the fork skips quota queries for confirmed Free accounts
+    while continuing to refresh their plans. Network settings can use system networking or an
+    optional local HTTP proxy.
   - Native menus, clipboard copy and Open at Login through SMAppService.
   - The original OAuth request reaches Google's sign-in form in a fresh Chrome 156.0.8078.48
     incognito context on macOS 27.0.1. Completing private-window account enrollment remains

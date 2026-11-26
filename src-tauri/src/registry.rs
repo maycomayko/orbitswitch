@@ -43,6 +43,8 @@ pub struct Account {
 struct File {
     version: u32,
     accounts: Vec<Account>,
+    #[serde(default)]
+    usage_enabled: bool,
     /// Fingerprint of the IDE refresh token last seen, so a new sign-in made
     /// inside Antigravity is adopted once and a removed account stays removed.
     #[serde(default)]
@@ -104,6 +106,20 @@ impl Registry {
 
     pub fn get(&self, id: &str) -> Option<&Account> {
         self.antigravity_accounts().find(|a| a.id == id)
+    }
+
+    pub fn usage_enabled(&self) -> bool {
+        self.file.usage_enabled
+    }
+
+    pub fn set_usage_enabled(&mut self, enabled: bool) -> Result<()> {
+        let previous = self.file.usage_enabled;
+        if previous == enabled {
+            return Ok(());
+        }
+        self.file.usage_enabled = enabled;
+        self.save()
+            .inspect_err(|_| self.file.usage_enabled = previous)
     }
 
     /// Inserts a new account or refreshes an existing one in place, keeping
@@ -245,6 +261,32 @@ pub(crate) fn write_file(path: &Path, bytes: &[u8]) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn usage_is_opt_in_for_fresh_and_existing_registries() {
+        let dir = tempfile::tempdir().unwrap();
+        assert!(!Registry::load(dir.path()).unwrap().usage_enabled());
+
+        let account = account("saved", Some("Saved account"));
+        fs::write(
+            dir.path().join(FILE),
+            serde_json::to_vec(&serde_json::json!({ "version": VERSION, "accounts": [account] }))
+                .unwrap(),
+        )
+        .unwrap();
+        let mut registry = Registry::load(dir.path()).unwrap();
+        assert!(!registry.usage_enabled());
+        registry.set_usage_enabled(true).unwrap();
+
+        let mut registry = Registry::load(dir.path()).unwrap();
+        assert!(registry.usage_enabled());
+        assert_eq!(registry.accounts()[0].id, "saved");
+        registry.set_usage_enabled(false).unwrap();
+
+        let registry = Registry::load(dir.path()).unwrap();
+        assert!(!registry.usage_enabled());
+        assert_eq!(registry.accounts()[0].id, "saved");
+    }
 
     fn account(id: &str, name: Option<&str>) -> Account {
         Account {
