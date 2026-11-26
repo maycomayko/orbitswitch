@@ -1,6 +1,6 @@
 # OrbitSwitch · Antigravity 桌面版
 
-[English](README.md) · [从源码构建](docs/release.md) · [兼容与验证记录](docs/status.md)
+[English](README.md) · [下载 Mac 版](https://github.com/maycomayko/orbitswitch/releases/latest) · [从源码构建](docs/release.md) · [兼容与验证记录](docs/status.md)
 
 一个轻量菜单栏工具，用来手动切换 Antigravity 桌面端的 Google 账号，并查看各账号的套餐和剩余额度。
 
