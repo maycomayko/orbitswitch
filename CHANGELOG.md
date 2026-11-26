@@ -6,6 +6,8 @@ All notable changes to OrbitSwitch are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-26
+
 ### Removed
 
 - Keep only the Antigravity account manager, including manual switching, login and native quota

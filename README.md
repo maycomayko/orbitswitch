@@ -1,6 +1,6 @@
 # OrbitSwitch for Antigravity Desktop
 
-[简体中文](README.zh-CN.md) · [Build from source](docs/release.md) · [Compatibility](docs/status.md)
+[简体中文](README.zh-CN.md) · [Download for Mac](https://github.com/maycomayko/orbitswitch/releases/latest) · [Build from source](docs/release.md) · [Compatibility](docs/status.md)
 
 A lightweight menu bar app for switching between your Google accounts in Antigravity Desktop and checking the quota Google reports for each account.
 
