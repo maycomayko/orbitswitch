@@ -1,11 +1,11 @@
 // Stands in for Tauri's IPC so the real UI renders demo accounts in a browser.
 // Only fictional names and example.com addresses: these screenshots are public.
-// Query: ?scene=list|confirm|switching|adding
+// Query: ?scene=hero|list|confirm|switching|adding
 
 const params = new URLSearchParams(location.search);
 const scene = params.get("scene") ?? "list";
-const provider = params.get("provider") ?? "antigravity";
-localStorage.setItem("orbitswitch.provider", provider);
+const chinese = params.get("lang")?.startsWith("zh");
+if (scene === "hero") document.documentElement.classList.add("readme-demo");
 // Screenshots are English regardless of the machine's language.
 Object.defineProperty(Navigator.prototype, "language", { get: () => params.get("lang") ?? "en-US" });
 
@@ -37,32 +37,22 @@ const pro = { kind: "pro", name: "Google AI Pro" };
 const snapshot = {
   platform: "macos",
   version: "0.2.1",
-  providers: ["antigravity", "codex", "claude"].map((provider) => ({
-    provider,
-    activeId: provider === "antigravity" ? "ada" : `${provider}-ada`,
-    installed: true,
-    desktopInstalled: true,
-    aligned: true,
-    running: true,
-  })),
+  client: { activeId: "ada", identityStale: false, installed: true, running: true },
+  network: { localHttpProxyPort: null, invalid: false },
   operation:
     scene === "switching"
       ? {
           kind: "switching",
-          provider,
-          targetId: provider === "antigravity" ? "grace" : `${provider}-grace`,
+          targetId: "grace",
           step: "writing",
         }
       : scene === "adding"
-        ? { kind: "adding", provider, canCopyLink: params.get("link") !== "preparing" }
+        ? { kind: "adding", canCopyLink: params.get("link") !== "preparing" }
         : { kind: "idle" },
   refreshing: false,
   refreshedAt: at(-MIN),
-  update: { checking: false, available: null },
   accounts: [
     {
-      provider: "antigravity",
-      desktopReady: true,
       id: "ada",
       email: "ada@example.com",
       name: "Ada Lovelace",
@@ -71,8 +61,6 @@ const snapshot = {
       quota: quota([0.62, 0.88, 3 * HOUR, 96 * HOUR], [0.07, 0.41, 72 * MIN, 96 * HOUR]),
     },
     {
-      provider: "antigravity",
-      desktopReady: true,
       id: "grace",
       email: "grace@example.com",
       name: "Grace Hopper",
@@ -81,8 +69,6 @@ const snapshot = {
       quota: quota([1, 0.97, 5 * HOUR, 130 * HOUR], null, ["Gemini 4 Hydrogen"]),
     },
     {
-      provider: "antigravity",
-      desktopReady: true,
       id: "alan",
       email: "alan@example.com",
       name: "Alan Turing",
@@ -93,52 +79,29 @@ const snapshot = {
   ],
 };
 
-for (const p of ["codex", "claude"]) {
-  const samples = snapshot.accounts
-    .filter((account) => account.provider === "antigravity")
-    .slice(0, p === "codex" ? 3 : 2);
-  snapshot.accounts.push(
-    ...samples.map((account, index) => ({
-      ...account,
-      id: `${p}-${account.id}`,
-      provider: p,
-      plan:
-        p === "codex"
-          ? { kind: index < 2 ? "pro" : "plus", name: index < 2 ? "ChatGPT Pro" : "ChatGPT Plus" }
-          : { kind: "max", name: "Claude Max" },
-      quota: {
-        status: "ready",
-        stale: false,
-        fetchedAt: at(-MIN),
-        groups: [
-          group(
-            p,
-            p === "codex" ? "Codex" : "Claude",
-            [],
-            p === "codex" && index < 2
-              ? [null, index ? 0.83 : 0.08, 0, 96 * HOUR]
-              : index
-                ? [0.94, 0.83, HOUR, 96 * HOUR]
-                : [0.08, 0.41, HOUR, 96 * HOUR],
-          ),
-        ],
-      },
-    })),
-  );
-}
 if (scene === "stale") {
-  const account = snapshot.accounts.find((a) => a.provider === provider);
+  const account = snapshot.accounts[0];
   account.quota.stale = true;
   (account.quota.groups[0].fiveHour ?? account.quota.groups[0].weekly).remaining = 0;
 }
-if (scene === "empty")
-  snapshot.accounts = snapshot.accounts.filter((account) => account.provider !== provider);
-if (scene === "binding")
-  snapshot.accounts
-    .filter((a) => a.provider === "claude")
-    .forEach((a) => {
-      a.desktopReady = false;
-    });
+if (scene === "empty") snapshot.accounts = [];
+if (scene === "hero") {
+  snapshot.accounts = [
+    {
+      ...snapshot.accounts[0],
+      email: "free@example.com",
+      name: chinese ? "演示 Free" : "Demo Free",
+      plan: { kind: "free", name: "Free" },
+      quota: { status: "free" },
+    },
+    {
+      ...snapshot.accounts[1],
+      email: "pro@example.com",
+      name: chinese ? "演示 Pro" : "Demo Pro",
+      quota: quota([0.74, 0.9, 2 * HOUR, 40 * HOUR], [0.51, 0.82, 4 * HOUR, 40 * HOUR]),
+    },
+  ];
+}
 window.__orbitDemo = { calls: [], snapshot };
 const processes = [
   { pid: 1, kind: "app" },

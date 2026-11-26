@@ -22,6 +22,8 @@ pub struct Bundle {
     pub auth_method: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub id_token: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub id_token_email: Option<String>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }
@@ -41,9 +43,18 @@ pub struct Token {
 
 impl Bundle {
     /// Builds the bundle Antigravity expects from a fresh token grant.
-    pub fn from_grant(grant: &TokenGrant, refresh_token: &str, auth_method: &str) -> Bundle {
+    pub fn from_grant(
+        grant: &TokenGrant,
+        refresh_token: &str,
+        profile: &Profile,
+    ) -> Result<Bundle> {
+        if profile.email.trim().is_empty() {
+            return Err(Error::Invalid(
+                "Google returned no target account email".into(),
+            ));
+        }
         let expiry = Local::now() + TimeDelta::seconds(grant.expires_in);
-        Bundle {
+        Ok(Bundle {
             token: Token {
                 access_token: grant.access_token.clone(),
                 token_type: "Bearer".into(),
@@ -51,10 +62,11 @@ impl Bundle {
                 expiry: Some(expiry.to_rfc3339_opts(SecondsFormat::AutoSi, false)),
                 extra: Map::new(),
             },
-            auth_method: Some(auth_method.to_owned()),
+            auth_method: Some(CONSUMER_AUTH_METHOD.to_owned()),
             id_token: grant.id_token.clone(),
+            id_token_email: Some(profile.email.clone()),
             extra: Map::new(),
-        }
+        })
     }
 
     /// Parses either the keyring encoding or plain JSON.
@@ -119,7 +131,17 @@ mod tests {
             refresh_token: None,
             id_token: None,
         };
-        let bundle = Bundle::from_grant(&grant, "r", CONSUMER_AUTH_METHOD);
+        let profile = Profile {
+            id: "test-account".into(),
+            email: "switch-target@example.invalid".into(),
+            ..Profile::default()
+        };
+        let bundle = Bundle::from_grant(&grant, "r", &profile).unwrap();
+        let payload: Value = serde_json::from_str(&bundle.to_json().unwrap()).unwrap();
+        assert_eq!(payload["id_token_email"], profile.email);
+        assert_eq!(payload["auth_method"], CONSUMER_AUTH_METHOD);
+        assert!(payload.get("id_token").is_none());
+        assert!(Bundle::from_grant(&grant, "r", &Profile::default()).is_err());
         let expiry = bundle.token.expiry.unwrap();
         assert!(chrono::DateTime::parse_from_rfc3339(&expiry).is_ok());
         assert!(

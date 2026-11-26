@@ -1,4 +1,4 @@
-//! OrbitSwitch: switch Antigravity, Codex and Claude accounts from the menu bar or tray.
+//! OrbitSwitch: switch Antigravity accounts from the menu bar or tray.
 
 mod accounts;
 mod antigravity;
@@ -7,7 +7,7 @@ mod commands;
 mod error;
 mod google;
 mod model;
-mod native;
+mod network;
 mod provider;
 mod quota;
 mod registry;
@@ -19,8 +19,8 @@ mod switcher;
 #[cfg(test)]
 mod system_tests;
 mod tokens;
+mod transaction;
 mod tray;
-mod updater;
 mod vault;
 
 use std::sync::Arc;
@@ -44,7 +44,6 @@ pub fn run() {
         .plugin(tauri_plugin_positioner::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
@@ -60,10 +59,11 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::get_snapshot,
             commands::refresh,
+            commands::test_network,
+            commands::save_network,
             commands::add_account,
             commands::cancel_add_account,
             commands::copy_sign_in_link,
-            commands::import_account,
             commands::remove_account,
             commands::switch_account,
             commands::running_processes,
@@ -73,8 +73,6 @@ pub fn run() {
             commands::reveal_logs,
             commands::autostart_enabled,
             commands::set_autostart,
-            commands::check_update,
-            commands::install_update,
             commands::quit,
         ])
         .run(tauri::generate_context!())

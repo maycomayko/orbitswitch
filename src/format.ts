@@ -1,8 +1,13 @@
 import { t } from "./i18n";
+import type { QuotaGroup } from "./types";
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
+
+export function quotaLabel(group: QuotaGroup): string {
+  return group.key === "claude" ? t("quota.shared") : group.label;
+}
 
 export function percent(fraction: number): string {
   return `${Math.round(fraction * 100)}%`;

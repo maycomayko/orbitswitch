@@ -8,14 +8,6 @@ use serde::{Serialize, Serializer, ser::SerializeStruct};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("the official client could not be located")]
-    ClientNotFound,
-    #[error("CLI runtime error: {0}")]
-    CliRuntime(String),
-    #[error("sign in to a subscription account in the official client first")]
-    SubscriptionLoginRequired,
-    #[error("sign in to this account in Claude Desktop, then import it to bind both clients")]
-    DesktopSignInRequired,
     #[error("the active client's token expired; open the client to renew its sign-in")]
     LiveTokenExpired,
     #[error(
@@ -38,6 +30,10 @@ pub enum Error {
     TokenRevoked,
     #[error("network error: {0}")]
     Network(String),
+    #[error("network settings could not be loaded")]
+    NetworkConfiguration,
+    #[error("Antigravity reopened, but the saved sign-in could not be confirmed")]
+    SignInUnconfirmed,
     #[error("unexpected response from {endpoint}: HTTP {status}")]
     Http { endpoint: &'static str, status: u16 },
     #[error("credential store error: {0}")]
@@ -52,12 +48,6 @@ pub enum Error {
     AccountNotFound,
     #[error("another operation is in progress")]
     Busy,
-    #[error("app update failed: {0}")]
-    Update(#[from] tauri_plugin_updater::Error),
-    #[error("this update is no longer available; check again")]
-    UpdateUnavailable,
-    #[error("app updates require an installed bundle; install OrbitSwitch first")]
-    UpdateNotInstalled,
     #[error("the written credential did not read back as the target account")]
     VerifyFailed,
     #[error("I/O error: {0}")]
@@ -69,10 +59,6 @@ pub enum Error {
 impl Error {
     pub fn code(&self) -> &'static str {
         match self {
-            Self::ClientNotFound => "client_not_found",
-            Self::CliRuntime(_) => "cli_runtime",
-            Self::SubscriptionLoginRequired => "subscription_login_required",
-            Self::DesktopSignInRequired => "desktop_sign_in_required",
             Self::LiveTokenExpired => "live_token_expired",
             Self::RollbackFailed => "rollback_failed",
             Self::AntigravityNotFound => "antigravity_not_found",
@@ -83,6 +69,8 @@ impl Error {
             Self::OAuthDenied(_) => "oauth_denied",
             Self::TokenRevoked => "token_revoked",
             Self::Network(_) => "network",
+            Self::NetworkConfiguration => "network_configuration",
+            Self::SignInUnconfirmed => "sign_in_unconfirmed",
             Self::Http { .. } => "http",
             Self::SecretStore(_) => "secret_store",
             Self::ProcessStuck(_) => "process_stuck",
@@ -90,9 +78,6 @@ impl Error {
             Self::LaunchAfterSwitch(_) => "launch_after_switch",
             Self::AccountNotFound => "account_not_found",
             Self::Busy => "busy",
-            Self::Update(_) => "update",
-            Self::UpdateUnavailable => "update_unavailable",
-            Self::UpdateNotInstalled => "update_not_installed",
             Self::VerifyFailed => "verify_failed",
             Self::Io(_) => "io",
             Self::Invalid(_) => "invalid",

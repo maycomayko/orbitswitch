@@ -207,7 +207,14 @@ fn merges_both_versions_preserves_new_grants_and_binding_then_runs_only_once() {
         .map(|account| account.id.as_str())
         .collect();
     assert_eq!(ids, ["ada", "codex-new", "grace", "codex-old", "claude"]);
-    assert!(loaded.get("claude").unwrap().desktop_ready);
+    assert!(
+        loaded
+            .accounts()
+            .iter()
+            .find(|a| a.id == "claude")
+            .unwrap()
+            .desktop_ready
+    );
     assert_eq!(
         stores
             .credentials
@@ -290,8 +297,24 @@ fn preserves_fingerprints_explicit_removals_and_latest_account_metadata() {
     stores.run().unwrap();
     let current = &stores.current;
     assert_eq!(current.accounts().len(), 1);
-    assert_eq!(current.get("kept").unwrap().name.as_deref(), Some("Latest"));
-    assert!(!current.get("kept").unwrap().desktop_ready);
+    assert_eq!(
+        current
+            .accounts()
+            .iter()
+            .find(|a| a.id == "kept")
+            .unwrap()
+            .name
+            .as_deref(),
+        Some("Latest")
+    );
+    assert!(
+        !current
+            .accounts()
+            .iter()
+            .find(|a| a.id == "kept")
+            .unwrap()
+            .desktop_ready
+    );
     assert_eq!(current.live_fingerprint(), Some("new-google"));
     assert_eq!(
         current.native_fingerprint(Provider::Claude),

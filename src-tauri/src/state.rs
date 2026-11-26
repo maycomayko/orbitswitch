@@ -2,7 +2,6 @@
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};
-use std::time::Duration;
 
 use chrono::{DateTime, Utc};
 use tauri::{AppHandle, Emitter, Manager};
@@ -12,18 +11,16 @@ use crate::antigravity::install::Install;
 use crate::antigravity::oauth_client::{self, OAuthClient};
 use crate::antigravity::process;
 use crate::error::{Error, Result};
-use crate::google::{USER_AGENT, oauth};
-use crate::model::{AccountView, Operation, ProviderStatus, QuotaState, SNAPSHOT_EVENT, Snapshot};
-use crate::provider::Provider;
+use crate::google::oauth;
+use crate::model::{AccountView, ClientStatus, Operation, QuotaState, SNAPSHOT_EVENT, Snapshot};
+use crate::network::{Network, NetworkSettings};
 use crate::registry::Registry;
 use crate::tokens::TokenCache;
-use crate::updater::UpdateState;
 use crate::vault;
-use std::collections::BTreeMap;
 
 pub struct Orbit {
     pub app: AppHandle,
-    pub http: reqwest::Client,
+    network: Mutex<Network>,
     pub tokens: TokenCache,
     pub sync_lock: tokio::sync::Mutex<()>,
     inner: Mutex<Inner>,
@@ -41,15 +38,12 @@ pub struct Inner {
     pub registry: Registry,
     pub quotas: HashMap<String, QuotaState>,
     pub active_id: Option<String>,
-    pub native_active: BTreeMap<Provider, Option<String>>,
-    pub native_aligned: BTreeMap<Provider, bool>,
-    pub native_clients: BTreeMap<Provider, (crate::native::install::Install, bool)>,
+    pub identity_stale: bool,
     pub operation: Operation,
     pub refreshing: bool,
     pub refreshed_at: Option<DateTime<Utc>>,
     pub install: Option<Install>,
     pub running: bool,
-    pub update: UpdateState,
 }
 
 /// Holds the single operation slot; dropping it returns OrbitSwitch to idle.
@@ -71,32 +65,23 @@ impl Orbit {
             .path()
             .app_data_dir()
             .map_err(|err| Error::Invalid(err.to_string()))?;
-        let http = reqwest::Client::builder()
-            .user_agent(USER_AGENT)
-            .redirect(reqwest::redirect::Policy::none())
-            .connect_timeout(Duration::from_secs(10))
-            .timeout(Duration::from_secs(30))
-            .build()?;
         let install = Install::locate();
         let running = process::is_app_running(install.as_ref());
         Ok(Orbit {
             app,
-            http,
+            network: Mutex::new(Network::load(&data_dir)),
             tokens: TokenCache::default(),
             sync_lock: tokio::sync::Mutex::new(()),
             inner: Mutex::new(Inner {
                 registry: Registry::load(&data_dir)?,
                 quotas: HashMap::new(),
                 active_id: None,
-                native_active: BTreeMap::new(),
-                native_aligned: BTreeMap::new(),
-                native_clients: BTreeMap::new(),
+                identity_stale: false,
                 operation: Operation::Idle,
                 refreshing: false,
                 refreshed_at: None,
                 install,
                 running,
-                update: UpdateState::default(),
             }),
             client: OnceCell::new(),
             op_lock: Arc::new(tokio::sync::Mutex::new(())),
@@ -122,11 +107,8 @@ impl Orbit {
             version: env!("CARGO_PKG_VERSION"),
             accounts: state
                 .registry
-                .accounts()
-                .iter()
+                .antigravity_accounts()
                 .map(|account| AccountView {
-                    provider: account.provider,
-                    desktop_ready: account.desktop_ready,
                     id: account.id.clone(),
                     email: account.email.clone(),
                     name: account.name.clone(),
@@ -139,45 +121,16 @@ impl Orbit {
                         .unwrap_or(QuotaState::Loading),
                 })
                 .collect(),
-            providers: Provider::ALL
-                .into_iter()
-                .map(|provider| {
-                    if provider == Provider::Antigravity {
-                        ProviderStatus {
-                            provider,
-                            active_id: state.active_id.clone(),
-                            installed: state.install.is_some(),
-                            desktop_installed: state.install.is_some(),
-                            aligned: true,
-                            running: state.running,
-                        }
-                    } else {
-                        let (install, running) = state
-                            .native_clients
-                            .get(&provider)
-                            .cloned()
-                            .unwrap_or_default();
-                        let aligned = install.app.is_none()
-                            || state.native_aligned.get(&provider) == Some(&true);
-                        ProviderStatus {
-                            provider,
-                            active_id: if aligned {
-                                state.native_active.get(&provider).cloned().flatten()
-                            } else {
-                                None
-                            },
-                            aligned,
-                            installed: install.cli.is_some() || install.app.is_some(),
-                            desktop_installed: install.app.is_some(),
-                            running,
-                        }
-                    }
-                })
-                .collect(),
+            client: ClientStatus {
+                active_id: state.active_id.clone(),
+                identity_stale: state.identity_stale,
+                installed: state.install.is_some(),
+                running: state.running,
+            },
+            network: self.network.lock().expect("network poisoned").status(),
             operation: state.operation.clone(),
             refreshing: state.refreshing,
             refreshed_at: state.refreshed_at,
-            update: state.update.snapshot(),
         }
     }
 
@@ -196,16 +149,7 @@ impl Orbit {
             .filter(|i| i.main_exe.is_file())
             .or_else(Install::locate);
         let running = process::is_app_running(install.as_ref());
-        let native_clients = [Provider::Codex, Provider::Claude]
-            .into_iter()
-            .map(|provider| {
-                let install = crate::native::install::locate(provider);
-                let running = crate::native::process::is_running(provider, &install);
-                (provider, (install, running))
-            })
-            .collect();
         self.update(|state| {
-            state.native_clients = native_clients;
             state.install = install;
             state.running = running;
         });
@@ -228,10 +172,23 @@ impl Orbit {
     pub async fn oauth_client(&self) -> Result<OAuthClient> {
         self.client
             .get_or_try_init(|| async {
-                oauth_client::discover(&self.http, &self.install()?).await
+                oauth_client::discover(&self.http()?, &self.install()?).await
             })
             .await
             .cloned()
+    }
+
+    pub fn http(&self) -> Result<reqwest::Client> {
+        self.network.lock().expect("network poisoned").client()
+    }
+
+    pub fn save_network(&self, settings: NetworkSettings) -> Result<()> {
+        self.network
+            .lock()
+            .expect("network poisoned")
+            .save(settings)?;
+        self.emit();
+        Ok(())
     }
 
     /// A valid access token for the account, refreshed from the vault when
@@ -242,7 +199,7 @@ impl Orbit {
         }
         let refresh_token = vault::get(account_id)?.ok_or(Error::AccountNotFound)?;
         let client = self.oauth_client().await?;
-        let grant = oauth::refresh(&self.http, &client, &refresh_token).await?;
+        let grant = oauth::refresh(&self.http()?, &client, &refresh_token).await?;
         self.tokens
             .put(account_id, grant.access_token.clone(), grant.expires_in);
         Ok(grant.access_token)

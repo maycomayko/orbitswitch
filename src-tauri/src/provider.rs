@@ -1,4 +1,4 @@
-//! Stable provider identities; product labels are frontend presentation.
+//! Legacy account-registry tags, kept solely for backward-compatible serialization.
 use serde::{Deserialize, Serialize};
 
 #[derive(
@@ -10,14 +10,4 @@ pub enum Provider {
     Antigravity,
     Codex,
     Claude,
-}
-impl Provider {
-    pub const ALL: [Self; 3] = [Self::Antigravity, Self::Codex, Self::Claude];
-    pub fn key(self) -> &'static str {
-        match self {
-            Self::Antigravity => "antigravity",
-            Self::Codex => "codex",
-            Self::Claude => "claude",
-        }
-    }
 }

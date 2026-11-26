@@ -43,8 +43,8 @@ cargo test
 cd src-tauri && cargo test system_tests -- --ignored --nocapture
 ```
 
-Requires the target official clients to be signed in. Reads installed credentials, fetches quota and
-validates Claude Desktop's binding without stopping processes or rewriting credentials. Update
+Requires Antigravity to be signed in. Reads installed credentials and fetches quota without
+stopping processes or rewriting credentials. Update
 [`docs/status.md`](docs/status.md) and the owning integration doc when verifying a new client version
 or contract.
 
@@ -72,4 +72,4 @@ Issues are the single to-do list:
 - `needs-decision`: waiting on a product or design decision.
 - `help wanted`, `good first issue`: open for contributors.
 
-Release steps live in [`docs/release.md`](docs/release.md).
+Local packaging steps live in [`docs/release.md`](docs/release.md).

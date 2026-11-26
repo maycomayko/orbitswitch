@@ -23,8 +23,8 @@
       "nsis"
     ],
     "category": "DeveloperTool",
-    "shortDescription": "Switch Antigravity, Codex and Claude accounts and view subscription quotas",
-    "copyright": "\u00a9 OrbitSwitch contributors \u00b7 MIT License",
+    "shortDescription": "Switch Antigravity accounts and view subscription quotas",
+    "copyright": "© OrbitSwitch contributors · MIT License",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -40,16 +40,6 @@
       "nsis": {
         "installMode": "currentUser"
       }
-    },
-    "createUpdaterArtifacts": true
-  },
-  "plugins": {
-    "updater": {
-      "requireSignedVersion": true,
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQwQURCODRGODc4NDJBQTYKUldTbUtvU0hUN2l0UUxoQkRoZkdTV25QTUZzU29tKzlMNVV6Z1h6OWljUUM0QU5ndHdVbndDS0gK",
-      "endpoints": [
-        "https://github.com/shengyy/orbitswitch/releases/latest/download/latest.json"
-      ]
     }
   }
 }

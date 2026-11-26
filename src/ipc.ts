@@ -2,27 +2,25 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import type { BackendError, Provider, RelatedProcess, Snapshot, UpdateInfo } from "./types";
+import type { BackendError, NetworkSettings, RelatedProcess, Snapshot } from "./types";
 
 export const ipc = {
   snapshot: () => invoke<Snapshot>("get_snapshot"),
   refresh: (force: boolean) => invoke<void>("refresh", { force }),
-  addAccount: (provider: Provider) => invoke<string>("add_account", { provider }),
-  importAccount: (provider: Provider, expectedId?: string) =>
-    invoke<string>("import_account", { provider, expectedId }),
+  testNetwork: (settings: NetworkSettings) => invoke<void>("test_network", { settings }),
+  saveNetwork: (settings: NetworkSettings) => invoke<void>("save_network", { settings }),
+  addAccount: () => invoke<string>("add_account"),
   cancelAddAccount: () => invoke<void>("cancel_add_account"),
   copySignInLink: () => invoke<void>("copy_sign_in_link"),
   removeAccount: (id: string) => invoke<void>("remove_account", { id }),
   switchAccount: (id: string) => invoke<void>("switch_account", { id }),
-  runningProcesses: (provider: Provider) => invoke<RelatedProcess[]>("running_processes", { provider }),
-  stopClient: (provider: Provider) => invoke<void>("stop_client", { provider }),
-  restartClient: (provider: Provider) => invoke<void>("restart_client", { provider }),
+  runningProcesses: () => invoke<RelatedProcess[]>("running_processes"),
+  stopClient: () => invoke<void>("stop_client"),
+  restartClient: () => invoke<void>("restart_client"),
   resizePanel: (height: number) => invoke<void>("resize_panel", { height }),
   revealLogs: () => invoke<void>("reveal_logs"),
   autostartEnabled: () => invoke<boolean>("autostart_enabled"),
   setAutostart: (enabled: boolean) => invoke<void>("set_autostart", { enabled }),
-  checkUpdate: () => invoke<UpdateInfo | null>("check_update"),
-  installUpdate: (version: string) => invoke<void>("install_update", { version }),
   quit: () => invoke<void>("quit"),
 };
 

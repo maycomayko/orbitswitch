@@ -6,6 +6,28 @@ All notable changes to OrbitSwitch are documented here. The format follows
 
 ## [Unreleased]
 
+### Removed
+
+- Keep only the Antigravity account manager, including manual switching, login and native quota
+  display. Remove the other client integrations and the upstream application updater. Existing
+  Antigravity sign-ins remain available, and unrelated records in earlier app storage are retained.
+
+### Fixed
+
+- Add a desktop network settings sheet with system networking, an optional local HTTP proxy,
+  and a Google connection test that uses no account credentials.
+- Scope switching to the desktop installation. Stop before credential writes if the desktop
+  does not close cleanly, and confirm the saved sign-in again after it reopens.
+- Retain the last confirmed identity when offline and distinguish unknown plans from Free.
+- Skip quota requests for Free Antigravity accounts and show a neutral message. Continue to refresh
+  the account's plan so upgrades are detected.
+- Allow a per-app loopback HTTP proxy for OrbitSwitch's Google HTTPS requests, configured in
+  `network.json`. Browser sign-in and its local callback use their existing routes.
+- Write the verified target account email into Antigravity's personal sign-in record in the format
+  used by Desktop 2.35.2.
+- Verify the Keychain and fallback credential separately. If a switch fails, restore each location
+  to its own previous state, including when the fallback file did not exist.
+
 ## [0.3.1] - 2026-11-24
 
 ### Removed

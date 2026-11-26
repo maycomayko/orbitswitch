@@ -1,4 +1,4 @@
-//! Keep rollback semantics identical for CLI and desktop credential writes.
+//! Keep rollback semantics identical for client credential writes.
 use crate::error::{Error, Result};
 pub fn apply(
     write_and_verify: impl FnOnce() -> Result<()>,

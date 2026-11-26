@@ -8,19 +8,17 @@
 
 use std::sync::Arc;
 
-use crate::antigravity::credential::{Bundle, CONSUMER_AUTH_METHOD};
+use crate::antigravity::credential::Bundle;
 use crate::antigravity::{live, process};
 use crate::error::{Error, Result};
 use crate::google::oauth;
 use crate::model::{Operation, QuotaState, SwitchStep};
-use crate::provider::Provider;
 use crate::registry;
 use crate::state::Orbit;
-use crate::{quota, vault};
+use crate::{scheduler, vault};
 
 pub async fn switch(orbit: &Arc<Orbit>, target_id: &str) -> Result<()> {
     let step = |step| Operation::Switching {
-        provider: Provider::Antigravity,
         target_id: target_id.to_owned(),
         step,
     };
@@ -31,8 +29,9 @@ pub async fn switch(orbit: &Arc<Orbit>, target_id: &str) -> Result<()> {
         return Err(Error::AccountNotFound);
     }
     let refresh_token = vault::get(target_id)?.ok_or(Error::AccountNotFound)?;
+    let http = orbit.http()?;
     let client = orbit.oauth_client().await?;
-    let grant = match oauth::refresh(&orbit.http, &client, &refresh_token).await {
+    let grant = match oauth::refresh(&http, &client, &refresh_token).await {
         Err(Error::TokenRevoked) => {
             orbit.update(|state| {
                 state
@@ -44,64 +43,85 @@ pub async fn switch(orbit: &Arc<Orbit>, target_id: &str) -> Result<()> {
         other => other?,
     };
 
-    let target =
-        oauth::profile(&orbit.http, &grant.access_token, grant.id_token.as_deref()).await?;
+    let target = oauth::profile(&http, &grant.access_token, grant.id_token.as_deref()).await?;
     if target.id != target_id {
         return Err(Error::VerifyFailed);
     }
 
-    let previous = live::read()?;
-    save_back(orbit, previous.as_ref()).await?;
-    let auth_method = previous
-        .as_ref()
-        .and_then(|bundle| bundle.auth_method.clone())
-        .unwrap_or_else(|| CONSUMER_AUTH_METHOD.to_owned());
-    let bundle = Bundle::from_grant(&grant, &refresh_token, &auth_method);
+    let current_grant = grant.refresh_token.as_deref().unwrap_or(&refresh_token);
+    let bundle = Bundle::from_grant(&grant, current_grant, &target)?;
+    if bundle
+        .claims()
+        .is_some_and(|claims| claims.sub != target_id)
+    {
+        return Err(Error::VerifyFailed);
+    }
+    save_back(orbit, &http, live::read()?.as_ref()).await?;
+    if current_grant != refresh_token {
+        vault::set(target_id, current_grant)?;
+    }
 
     orbit.set_operation(step(SwitchStep::Closing));
     process::stop_all(Some(&install)).await?;
 
     orbit.set_operation(step(SwitchStep::Writing));
-    if let Err(err) = write_and_verify(&bundle, target_id) {
-        log::error!("switch failed while writing, restoring the previous sign-in: {err}");
-        let restored = match &previous {
-            Some(previous) => live::write(previous),
-            None => live::clear(),
-        };
-        if let Err(restore_err) = restored {
-            log::error!("restoring the previous sign-in failed: {restore_err}");
-            return Err(Error::RollbackFailed);
+    if let Err(err) = live::replace(&bundle) {
+        if !matches!(err, Error::RollbackFailed) {
+            let _ = process::launch(&install).await;
         }
-        let _ = process::launch(&install).await;
         return Err(err);
     }
+    orbit.set_operation(step(SwitchStep::Launching));
+    if let Err(err) = process::launch(&install).await {
+        orbit.update(|state| state.identity_stale = state.active_id.is_some());
+        return Err(err.after_switch());
+    }
+    let Some(fingerprint) = verify_reopened_session(&http, &bundle, target_id).await else {
+        orbit.update(|state| state.identity_stale = state.active_id.is_some());
+        return Err(Error::SignInUnconfirmed);
+    };
     orbit
         .tokens
-        .put(target_id, grant.access_token.clone(), grant.expires_in);
-    orbit.update(|state| -> Result<()> {
+        .put(target_id, grant.access_token, grant.expires_in);
+    orbit.update(|state| {
         state.active_id = Some(target_id.to_owned());
-        state
-            .registry
-            .set_live_fingerprint(registry::fingerprint(&refresh_token))
-    })?;
-    log::info!("switched Antigravity to another account");
-
-    orbit.set_operation(step(SwitchStep::Launching));
-    let launched = process::launch(&install).await.map_err(Error::after_switch);
+        state.identity_stale = false;
+        if let Err(err) = state.registry.set_live_fingerprint(fingerprint) {
+            log::warn!("Antigravity reopened; could not save local account bookkeeping: {err}");
+        }
+    });
+    log::info!("Antigravity reopened and its saved sign-in matched the target");
     drop(sync);
     drop(guard);
-    orbit.refresh_status();
-    quota::refresh_one(orbit, target_id).await;
-    launched
+    let orbit = orbit.clone();
+    tauri::async_runtime::spawn(async move { scheduler::tick(&orbit).await });
+    Ok(())
+}
+
+async fn verify_reopened_session(
+    http: &reqwest::Client,
+    target: &Bundle,
+    target_id: &str,
+) -> Option<String> {
+    let live = tokio::task::spawn_blocking(live::read).await.ok()?.ok()??;
+    let token = live.token.refresh_token.as_str();
+    if token.is_empty() {
+        return None;
+    }
+    if token == target.token.refresh_token || live.profile(http).await.ok()?.id == target_id {
+        Some(registry::fingerprint(token))
+    } else {
+        None
+    }
 }
 
 /// Antigravity may hold a newer refresh token for the account it is signed
 /// in with (for example after signing in again inside the IDE). Keep it.
-async fn save_back(orbit: &Orbit, previous: Option<&Bundle>) -> Result<()> {
+async fn save_back(orbit: &Orbit, http: &reqwest::Client, previous: Option<&Bundle>) -> Result<()> {
     let Some(bundle) = previous.filter(|bundle| !bundle.token.refresh_token.is_empty()) else {
         return Ok(());
     };
-    let profile = match bundle.profile(&orbit.http).await {
+    let profile = match bundle.profile(http).await {
         Ok(profile) => profile,
         Err(error) => {
             log::warn!("could not identify the outgoing Antigravity sign-in: {error}");
@@ -114,25 +134,8 @@ async fn save_back(orbit: &Orbit, previous: Option<&Bundle>) -> Result<()> {
     vault::set(&profile.id, &bundle.token.refresh_token)
 }
 
-fn write_and_verify(bundle: &Bundle, target_id: &str) -> Result<()> {
-    live::write(bundle)?;
-    let written = live::read()?.ok_or(Error::VerifyFailed)?;
-    let matches = written.token.refresh_token == bundle.token.refresh_token
-        && written.token.access_token == bundle.token.access_token
-        && written
-            .claims()
-            .is_none_or(|claims| claims.sub == target_id);
-    if matches {
-        Ok(())
-    } else {
-        Err(Error::VerifyFailed)
-    }
-}
-
 pub async fn stop(orbit: &Arc<Orbit>) -> Result<()> {
-    let _guard = orbit.begin(Operation::Stopping {
-        provider: Provider::Antigravity,
-    })?;
+    let _guard = orbit.begin(Operation::Stopping)?;
     let install = orbit.install().ok();
     let result = process::stop_all(install.as_ref()).await;
     orbit.refresh_status();
@@ -140,9 +143,7 @@ pub async fn stop(orbit: &Arc<Orbit>) -> Result<()> {
 }
 
 pub async fn restart(orbit: &Arc<Orbit>) -> Result<()> {
-    let _guard = orbit.begin(Operation::Restarting {
-        provider: Provider::Antigravity,
-    })?;
+    let _guard = orbit.begin(Operation::Restarting)?;
     let install = orbit.install()?;
     process::stop_all(Some(&install)).await?;
     let result = process::launch(&install).await;

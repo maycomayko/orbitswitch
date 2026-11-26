@@ -1,46 +1,33 @@
+import { antigravity } from "../client";
 import { t } from "../i18n";
-import { providerInfo } from "../providers";
-import type { ProviderStatus } from "../types";
+import type { ClientStatus } from "../types";
 import { PlayIcon, PlusIcon, PowerIcon, RestartIcon } from "./icons";
 import "./footer.css";
 
 interface Props {
-  status: ProviderStatus;
-  onImport: () => void;
+  status: ClientStatus;
   busy: boolean;
   onAdd: () => void;
   onRestart: () => void;
   onStop: () => void;
 }
 
-export function Footer({ status, busy, onAdd, onImport, onRestart, onStop }: Props) {
+export function Footer({ status, busy, onAdd, onRestart, onStop }: Props) {
   const { installed, running } = status;
-  const vars = { client: providerInfo[status.provider].client };
   return (
     <footer className="panel-footer">
-      <button type="button" className="footer-btn footer-add" disabled={busy} onClick={onAdd}>
+      <button type="button" className="footer-btn footer-add" disabled={busy || !installed} onClick={onAdd}>
         <PlusIcon />
         {t("footer.add")}
       </button>
-      {status.provider !== "antigravity" && (
-        <button
-          type="button"
-          className="footer-btn"
-          disabled={busy}
-          onClick={onImport}
-          title={t("footer.importHint")}
-        >
-          {t("footer.import")}
-        </button>
-      )}
       <span className="footer-spacer" />
       {installed && running && (
         <>
           <button
             type="button"
             className="footer-btn"
-            title={t("footer.restartTitle", vars)}
-            disabled={busy || !status.desktopInstalled}
+            title={t("footer.restartTitle", antigravity)}
+            disabled={busy}
             onClick={onRestart}
           >
             <RestartIcon />
@@ -49,7 +36,7 @@ export function Footer({ status, busy, onAdd, onImport, onRestart, onStop }: Pro
           <button
             type="button"
             className="footer-btn"
-            title={t("footer.stopTitle", vars)}
+            title={t("footer.stopTitle", antigravity)}
             disabled={busy}
             onClick={onStop}
           >
@@ -58,10 +45,10 @@ export function Footer({ status, busy, onAdd, onImport, onRestart, onStop }: Pro
           </button>
         </>
       )}
-      {status.desktopInstalled && !running && (
+      {installed && !running && (
         <button type="button" className="footer-btn" disabled={busy} onClick={onRestart}>
           <PlayIcon />
-          {t("footer.launch", vars)}
+          {t("footer.launch", antigravity)}
         </button>
       )}
     </footer>

@@ -16,11 +16,11 @@ export function available(group: QuotaGroup): number | null {
   return windows.length ? Math.min(...windows.map((w) => w.remaining)) : null;
 }
 
-/** Primary pool (`codex` or `claude`) decides; `gemini` breaks ties. */
+/** The Antigravity shared Claude/GPT pool decides when available; Gemini breaks ties. */
 function score(account: Account): number | null {
   if (account.quota.status !== "ready" || account.quota.stale) return null;
   const groups = account.quota.groups;
-  const primaryGroup = groups.find((g) => g.key === (account.provider === "codex" ? "codex" : "claude"));
+  const primaryGroup = groups.find((g) => g.key === "claude");
   const gemini = groups.find((g) => g.key === "gemini");
   const primary = (primaryGroup && available(primaryGroup)) ?? (gemini && available(gemini));
   if (primary === null || primary === undefined) return null;
@@ -34,11 +34,7 @@ export function bestAccountId(accounts: Account[], activeId: string | null): str
   if (activeScore === null) return null;
   let best: { id: string; score: number } | null = null;
   for (const account of accounts) {
-    if (
-      account.id === activeId ||
-      (active && (account.provider !== active.provider || shape(account) !== shape(active)))
-    )
-      continue;
+    if (account.id === activeId || (active && shape(account) !== shape(active))) continue;
     const s = score(account);
     if (s !== null && s > 0 && (best === null || s > best.score)) best = { id: account.id, score: s };
   }
@@ -48,7 +44,7 @@ export function bestAccountId(accounts: Account[], activeId: string | null): str
 function shape(account: Account): string {
   if (account.quota.status !== "ready") return "";
   return account.quota.groups
-    .filter((g) => ["claude", "gemini", "codex"].includes(g.key))
+    .filter((g) => g.key === "claude" || g.key === "gemini")
     .map(
       (g) =>
         `${g.key}:${[g.fiveHour, g.weekly, ...g.extra]
