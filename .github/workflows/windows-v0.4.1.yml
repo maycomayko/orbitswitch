@@ -1,0 +1,68 @@
+name: Package Windows v0.4.1
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Windows x64 installer
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'build/windows-v0.4.1'
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: 4791e9e17c2ad11971120e88c293c0c8760dcb6d
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+      - run: rustup toolchain install
+      - run: bun install --frozen-lockfile
+      - name: Build the Windows x64 NSIS installer
+        # This fork distributes one installer type and has no automatic updater.
+        run: bun tauri build --target x86_64-pc-windows-msvc --bundles nsis --no-binary-patching
+      - name: Install and verify the package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $buildDir = 'src-tauri/target/x86_64-pc-windows-msvc/release'
+          $installers = @(Get-ChildItem "$buildDir/bundle/nsis/*-setup.exe")
+          if ($installers.Count -ne 1) {
+            throw "Expected one NSIS installer, found $($installers.Count)"
+          }
+          New-Item -ItemType Directory -Path publish | Out-Null
+          $asset = 'OrbitSwitch-v0.4.1-windows-x64-setup.exe'
+          Copy-Item $installers[0].FullName "publish/$asset"
+          $installDir = Join-Path $env:RUNNER_TEMP 'orbitswitch-installer-test'
+          $installer = Start-Process $installers[0].FullName -ArgumentList "/S /D=$installDir" -Wait -PassThru
+          if ($installer.ExitCode -ne 0) {
+            throw "NSIS installer exited with code $($installer.ExitCode)"
+          }
+          $installed = Join-Path $installDir 'orbitswitch.exe'
+          $appHash = (Get-FileHash "$buildDir/orbitswitch.exe" -Algorithm SHA256).Hash
+          if ((Get-FileHash $installed -Algorithm SHA256).Hash -ne $appHash) {
+            throw 'Installed binary differs from the built binary'
+          }
+          $info = (Get-Item $installed).VersionInfo
+          if ($info.FileMajorPart -ne 0 -or $info.FileMinorPart -ne 4 -or $info.FileBuildPart -ne 1) {
+            throw "Unexpected app version: $($info.FileVersion)"
+          }
+          $bytes = [IO.File]::ReadAllBytes($installed)
+          $offset = [BitConverter]::ToInt32($bytes, 0x3c)
+          if ([BitConverter]::ToUInt32($bytes, $offset) -ne 0x4550 -or
+              [BitConverter]::ToUInt16($bytes, $offset + 4) -ne 0x8664) {
+            throw 'Expected a Windows x64 app binary'
+          }
+          $hash = (Get-FileHash "publish/$asset" -Algorithm SHA256).Hash.ToLowerInvariant()
+          $checksum = Join-Path $PWD.Path 'publish/SHA256SUMS-windows.txt'
+          [IO.File]::WriteAllText($checksum, "$hash  $asset`n")
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: OrbitSwitch-v0.4.1-windows-x64
+          path: publish/
+          if-no-files-found: error
+          retention-days: 7
