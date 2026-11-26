@@ -10,6 +10,8 @@ A lightweight menu bar app for switching between your Google accounts in Antigra
 - **See plans and quota.** Check remaining quota and reset times where Google provides them. Free accounts show their plan without a quota warning.
 - **Set the network route.** In **⋯ → Network settings**, use system networking or a local HTTP proxy. Test the connection before saving.
 
+On macOS with Antigravity 2.35.2, switching between Free and Pro preserved local projects, and testing confirmed that existing conversations could continue and installed plugins could be used. Antigravity showed an onboarding prompt in both directions. Click **Continue** to return to the workspace. [Verification details](docs/status.md#installed-client-verification-macos)
+
 **Platforms:** macOS 26+. Windows 10/11 x64 can be built from source; account switching on Windows has not been tested on a real installation. See [the verification record](docs/status.md) for Antigravity version coverage.
 
 [MIT](LICENSE) · A desktop-only fork of [OrbitSwitch](https://github.com/shengyy/orbitswitch).

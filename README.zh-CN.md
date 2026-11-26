@@ -10,6 +10,8 @@
 - **查看额度。** 显示 Google 返回的剩余额度和重置时间。Free 账号只显示套餐和无额度明细的提示。
 - **设置网络。** 从 **··· → 网络设置** 选择跟随系统网络或使用本机 HTTP 代理，保存前可以测试连接。
 
+在 macOS 上实测 Antigravity 2.35.2，Free 和 Pro 双向切换后，本机项目仍在，旧会话可以继续聊，已安装的插件可以使用。两个方向都出现了 Antigravity 的引导弹窗，点击「继续」即可回到工作区。[验证详情](docs/status.md#installed-client-verification-macos)
+
 **平台：** macOS 26+。Windows 10/11 x64 可从源码构建，尚未在 Windows 实机验证换号。Antigravity 各版本的验证范围见[验证记录](docs/status.md)。
 
 [MIT](LICENSE) · 基于 [OrbitSwitch](https://github.com/shengyy/orbitswitch) 的桌面专用 fork。

@@ -35,8 +35,12 @@ Update this page in the same PR whenever verification scope changes.
   - On that installation, the user added a second Google account through OrbitSwitch. The
     existing Free account remained current, and the added Pro account showed five-hour and
     weekly windows for both the Gemini and shared quota pools.
-  - Switching between these accounts and reopening projects, conversations, and authorized
-    tools remain **not verified**.
+  - On that installation, the user tested Free → Pro → Free through OrbitSwitch.
+    Existing local projects, conversations, and installed global plugins remained visible
+    after both switches. The user also confirmed that they could continue an existing conversation
+    and use installed plugins after switching. Antigravity showed an onboarding prompt in both
+    directions, and clicking **Continue** returned to the workspace. Whether the prompt recurs
+    on later switches remains **unverified**.
   - The fork skips quota queries for confirmed Free accounts while continuing to refresh their
     plans. Network settings can use system networking or an optional local HTTP proxy.
   - Native menus, clipboard copy and Open at Login through SMAppService.
