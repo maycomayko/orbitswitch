@@ -23,7 +23,8 @@ jobs:
       - run: rustup toolchain install
       - run: bun install --frozen-lockfile
       - name: Build the Windows x64 NSIS installer
-        run: bun tauri build --target x86_64-pc-windows-msvc --bundles nsis
+        # This fork distributes one installer type and has no automatic updater.
+        run: bun tauri build --target x86_64-pc-windows-msvc --bundles nsis --no-binary-patching
       - name: Install and verify the package
         shell: pwsh
         run: |
@@ -57,7 +58,8 @@ jobs:
             throw 'Expected a Windows x64 app binary'
           }
           $hash = (Get-FileHash "publish/$asset" -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$hash  $asset" | Set-Content 'publish/SHA256SUMS-windows.txt' -Encoding ascii
+          $checksum = Join-Path $PWD.Path 'publish/SHA256SUMS-windows.txt'
+          [IO.File]::WriteAllText($checksum, "$hash  $asset`n")
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: OrbitSwitch-v0.4.0-windows-x64
