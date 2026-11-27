@@ -3,6 +3,7 @@
 //! A switch waits for the selected desktop installation and its bundled helpers
 //! to close before changing credentials.
 
+use std::borrow::Cow;
 use std::path::Path;
 use std::time::{Duration, Instant};
 
@@ -27,19 +28,88 @@ fn snapshot() -> System {
 }
 
 fn classify(install: Option<&Install>, process: &Process) -> Option<ProcessKind> {
-    let exe = process.exe()?;
-    let file_name = exe.file_name()?.to_string_lossy().to_ascii_lowercase();
     let install = install?;
-    if !install.contains(exe) || matches!(file_name.as_str(), "agy" | "agy.exe") {
+    let exe = executable_path(process)?;
+    classify_executable(install, &exe)
+}
+
+fn classify_executable(install: &Install, exe: &Path) -> Option<ProcessKind> {
+    let file_name = exe.file_name()?.to_string_lossy().to_ascii_lowercase();
+    if matches!(file_name.as_str(), "agy" | "agy.exe") {
         return None;
     }
-    Some(if exe == install.main_exe {
-        ProcessKind::App
-    } else if file_name.starts_with("language_server") {
-        ProcessKind::LanguageServer
-    } else {
-        ProcessKind::Helper
+    let language_server = file_name.starts_with("language_server");
+    #[cfg(windows)]
+    if is_windows_client_image(&file_name)
+        && let (Ok(exe), Ok(root), Ok(main_exe)) = (
+            exe.canonicalize(),
+            install.root.canonicalize(),
+            install.main_exe.canonicalize(),
+        )
+    {
+        return classify_in_root(&exe, &root, &main_exe, language_server);
+    }
+    classify_in_root(exe, &install.root, &install.main_exe, language_server)
+}
+
+fn classify_in_root(
+    exe: &Path,
+    root: &Path,
+    main_exe: &Path,
+    language_server: bool,
+) -> Option<ProcessKind> {
+    exe.starts_with(root).then(|| {
+        if exe == main_exe {
+            ProcessKind::App
+        } else if language_server {
+            ProcessKind::LanguageServer
+        } else {
+            ProcessKind::Helper
+        }
     })
+}
+
+pub(super) fn executable_path(process: &Process) -> Option<Cow<'_, Path>> {
+    #[cfg(windows)]
+    if is_windows_client_image(&process.name().to_string_lossy().to_ascii_lowercase())
+        && let Some(path) = windows_image_path(process.pid().as_u32())
+    {
+        return Some(Cow::Owned(path));
+    }
+    process
+        .exe()
+        .filter(|path| path.is_absolute())
+        .map(Cow::Borrowed)
+}
+
+#[cfg(windows)]
+fn is_windows_client_image(lower_name: &str) -> bool {
+    lower_name == "antigravity.exe" || lower_name.starts_with("language_server")
+}
+
+#[cfg(windows)]
+fn windows_image_path(pid: u32) -> Option<std::path::PathBuf> {
+    use std::ffi::OsString;
+    use std::os::windows::ffi::OsStringExt;
+    use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle};
+    use windows_sys::Win32::System::Threading::{
+        OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION, QueryFullProcessImageNameW,
+    };
+
+    // 直接查询进程映像，避免依赖正在初始化的模块列表或 MAX_PATH 长度。
+    let handle = unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid) };
+    if handle.is_null() {
+        return None;
+    }
+    // SAFETY: OpenProcess returned an owned, non-null handle.
+    let handle = unsafe { OwnedHandle::from_raw_handle(handle) };
+    let mut image = vec![0_u16; 32_768];
+    let mut len = image.len() as u32;
+    // SAFETY: the handle and output buffer are valid for the duration of the call.
+    let ok = unsafe {
+        QueryFullProcessImageNameW(handle.as_raw_handle(), 0, image.as_mut_ptr(), &mut len)
+    };
+    (ok != 0).then(|| OsString::from_wide(&image[..len as usize]).into())
 }
 
 fn related(system: &System, install: Option<&Install>) -> Vec<(Pid, ProcessKind)> {
@@ -152,4 +222,89 @@ fn spawn_app(root: &Path, main_exe: &Path) -> std::io::Result<()> {
         .current_dir(root)
         .spawn()
         .map(drop)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn process_classification_stays_inside_the_selected_installation() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("Antigravity");
+        let install = Install {
+            main_exe: root.join("Antigravity.exe"),
+            bin_dir: root.join("resources").join("bin"),
+            root,
+        };
+        assert_eq!(
+            classify_executable(&install, &install.main_exe),
+            Some(ProcessKind::App),
+        );
+        assert_eq!(
+            classify_executable(&install, &install.bin_dir.join("language_server_x64.exe")),
+            Some(ProcessKind::LanguageServer),
+        );
+        assert_eq!(
+            classify_executable(&install, &install.root.join("crashpad_handler.exe")),
+            Some(ProcessKind::Helper),
+        );
+        assert_eq!(
+            classify_executable(&install, &install.bin_dir.join("agy.exe")),
+            None
+        );
+        assert_eq!(
+            classify_executable(
+                &install,
+                &dir.path().join("Antigravity IDE").join("Antigravity.exe")
+            ),
+            None,
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn recognizes_windows_installation_with_different_path_case() {
+        let dir = tempfile::tempdir().unwrap();
+        // 官方 Windows 安装目录使用小写，旧的标准候选路径以大写开头。
+        let disk_root = dir.path().join("antigravity");
+        let main_exe = disk_root.join("Antigravity.exe");
+        let bin_dir = disk_root.join("resources").join("bin");
+        let server = bin_dir.join("language_server_x64.exe");
+        std::fs::create_dir_all(&bin_dir).unwrap();
+        std::fs::write(&main_exe, []).unwrap();
+        std::fs::write(&server, []).unwrap();
+        let root = dir.path().join("Antigravity");
+        let install = Install {
+            main_exe: root.join("Antigravity.exe"),
+            bin_dir: root.join("resources").join("bin"),
+            root,
+        };
+        assert_eq!(
+            classify_in_root(&main_exe, &install.root, &install.main_exe, false),
+            None
+        );
+        assert_eq!(
+            classify_executable(&install, &main_exe),
+            Some(ProcessKind::App)
+        );
+        assert_eq!(
+            classify_executable(&install, &main_exe.canonicalize().unwrap()),
+            Some(ProcessKind::App),
+        );
+        assert_eq!(
+            classify_executable(&install, &server.canonicalize().unwrap()),
+            Some(ProcessKind::LanguageServer),
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn queries_the_executable_image_of_a_running_windows_process() {
+        let path = windows_image_path(std::process::id()).unwrap();
+        assert_eq!(
+            path.canonicalize().unwrap(),
+            std::env::current_exe().unwrap().canonicalize().unwrap(),
+        );
+    }
 }

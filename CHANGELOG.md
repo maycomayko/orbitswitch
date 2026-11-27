@@ -6,6 +6,16 @@ All notable changes to OrbitSwitch are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-11-27
+
+### Fixed
+
+- Detect running Antigravity Desktop processes on Windows even when the installation path is
+  spelled with different capitalization. This lets account switching wait for the old process
+  to exit before writing credentials.
+- If startup cannot be confirmed after writing the target account, ask the user to check which
+  account is active in Antigravity.
+
 ## [0.4.1] - 2026-11-26
 
 ### Changed
