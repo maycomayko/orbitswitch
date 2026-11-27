@@ -73,6 +73,8 @@ pub async fn switch(orbit: &Arc<Orbit>, target_id: &str) -> Result<()> {
     }
     orbit.set_operation(step(SwitchStep::Launching));
     if let Err(err) = process::launch(&install).await {
+        log::warn!("could not confirm Antigravity startup after writing the credential: {err}");
+        orbit.refresh_status();
         orbit.update(|state| state.identity_stale = state.active_id.is_some());
         return Err(err.after_switch());
     }

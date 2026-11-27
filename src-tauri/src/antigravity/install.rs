@@ -19,11 +19,6 @@ impl Install {
         candidates().into_iter().find_map(Install::at)
     }
 
-    /// Whether `path` belongs to this installation.
-    pub fn contains(&self, path: &Path) -> bool {
-        path.starts_with(&self.root)
-    }
-
     /// The version packaged with this installation, read again after app updates.
     pub fn version(&self) -> crate::error::Result<String> {
         super::version::read(&self.bin_dir.with_file_name("app.asar"))
@@ -130,7 +125,9 @@ fn running_roots(root_of: impl Fn(&Path) -> Option<PathBuf>) -> Vec<PathBuf> {
     let mut roots: Vec<PathBuf> = system
         .processes()
         .values()
-        .filter_map(|process| process.exe().and_then(&root_of))
+        .filter_map(|process| {
+            super::process::executable_path(process).and_then(|exe| root_of(&exe))
+        })
         .collect();
     roots.dedup();
     roots

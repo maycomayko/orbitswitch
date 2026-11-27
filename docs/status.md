@@ -48,6 +48,14 @@ Update this page in the same PR whenever verification scope changes.
   - The original OAuth request reaches Google's sign-in form in a fresh Chrome 156.0.8078.48
     incognito context on macOS 27.0.1. Completing private-window account enrollment remains
     **not verified**.
+
+## Installed-client inspection (Windows)
+
+- Antigravity Desktop 2.35.2 on Windows reached the sign-in screen. Its running executable
+  path used the lowercase `%LOCALAPPDATA%\Programs\antigravity` directory. OrbitSwitch 0.4.1
+  assumed the directory spelling `Antigravity` when comparing paths. Account switching remains
+  **not verified** on a Windows installation.
+
 ## Synthetic and loopback verification
 
 - **Antigravity quota**: the loopback check uses the current installed hub identity. Synthetic
